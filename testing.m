@@ -3,22 +3,34 @@ clear all;
 % ps = case30_ps;
 ps = case6_ps;
 
+C = psconstants;
+
+
+% ps.branch([4 7 8 11],C.br.status) = 0;
+ps.branch(:,C.br.status) = randi(2,1,size(ps.branch,1),1)'-1;
+
+% ps.branch([1 3 5 10],C.br.status) = 0;
+
 ps = dcpf(ps)
 
 printps(ps)
 
-C = psconstants;
 
 % ps.shunt(23,1) = 9;
 % ps.shunt(24,1) = 28; 
 
 % ps.branch([4 10],C.br.Pf) = 80;
 % ps.branch([15 24],C.br.Pf) = 70;
-ps.branch([4 6 7 8],C.br.rates) = 10;
+% ps.branch(:,C.br.rateA) = 10*randi(10,size(ps.branch,1),1);
+ps.branch(:,C.br.rateA) = 80*rand(size(ps.branch,1),1);
+
+% ps.branch(:,C.br.rates) = 10;
+
 
 EPS = 1e-6;
+br_st = ps.branch(:,C.br.status)~=0; % we could add conditions to this...
 
-measured_flow = ps.branch(:,C.br.Pf);
+measured_flow = ps.branch(br_st(:),C.br.Pf);
 
 % % check the inputs
 % if nargin<2, error('need at least 2 inputs'); end
@@ -47,12 +59,11 @@ if any(Pg<Pmin-EPS) || any(Pg>Pmax+EPS)
     error('Generation outside of Pmin/Pmax');
 end
 % collect transmission line data
-br_st = ps.branch(:,C.br.status)~=0; % we could add conditions to this...
 F = full(ps.bus(ps.branch(br_st,1)));
 T = full(ps.bus(ps.branch(br_st,2)));
 X = ps.branch(br_st,C.br.X);
 inv_X = 1./X;
-flow_max = ps.branch(br_st,C.br.rateB) / ps.baseMVA; % in per unit
+flow_max = ps.branch(br_st,C.br.rateA) / ps.baseMVA; % in per unit
 m = length(F); % number of transmission lines in the system
 
 %% set up an index so that we can find things
@@ -108,8 +119,8 @@ b_ineq = [-b_flow_left;b_flow_right];
 % if verbose
 %     disp('Solving the problem');
 % end
-x_star = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
-% x_star = cplexlp(cost',A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+% x_star = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+x_star = cplexlp(cost',A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
 
 
 delta_Pd_pu = x_star(ix.x.dPd);
