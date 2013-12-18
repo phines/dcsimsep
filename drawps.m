@@ -1,0 +1,165 @@
+function [x,y] = drawps(ps,opt)
+% draw the case defined in ps
+% usage: [x,y] = drawps(ps,options)
+% options are defined in psoptions
+
+%% process inputs
+if nargin<2,
+    opt=psoptions;
+end
+width_base=opt.draw.width;
+show_bus_nos=opt.draw.bus_nos;
+simple=opt.draw.simple;
+
+%% prep work and constants
+GREY = [1 1 1]*0.3;
+ORANGE = [255 127 0]/255;
+EPS = 1e-6;
+C = psconstants;
+ps = updateps(ps);
+locs = ps.bus(:,C.bu.locX:C.bu.locY);
+x = normalize(locs(:,1));
+y = normalize(locs(:,2));
+width_min     = width_base/100;
+circle_size   = width_base*0.7;
+triangle_size = width_base*0.03;
+
+if all(all(locs==0))
+    error('no bus location data provided');
+end
+    
+n = size(ps.bus,1);
+bus_sizes = zeros(n,1);
+
+%% prepare the figure
+clf; hold on;
+set(gcf,'Color','w'); % set bg to white
+axis off;
+
+%% draw the branches
+for i = 1:size(ps.branch,1)
+    f = ps.bus_i(ps.branch(i,C.br.from));
+    t = ps.bus_i(ps.branch(i,C.br.to));
+    status = ps.branch(i,C.br.status)==1;
+    flow = max(ps.branch(i,C.br.Imag_f:C.br.Imag_t));
+    flow_max = ps.branch(i,C.br.rateA:C.br.rateC)/ps.baseMVA;
+    X = [x(f) x(t)];
+    Y = [y(f) y(t)];
+    width = max(flow*width_base,width_min);
+    if simple
+        plot(X,Y,'k-');
+    elseif ~status || flow==0
+        %drawline(X,Y,GREY,width);
+    elseif flow<(flow_max(1)+EPS)
+        drawline(X,Y,GREY,width);
+    elseif flow<(flow_max(2)+EPS)
+        drawline(X,Y,'y',width);
+    elseif flow<(flow_max(3)+EPS)
+        drawline(X,Y,ORANGE,width);
+    else
+        drawline(X,Y,'r',width);
+    end
+    % note the bus size
+    bus_sizes(f) = max(bus_sizes(f),width);
+    bus_sizes(t) = max(bus_sizes(t),width);
+end
+
+%% draw the buses
+for i = 1:n
+    if simple
+        drawcircle(x(i),y(i),bus_sizes(i),'w','k',1);
+    else
+        drawcircle(x(i),y(i),bus_sizes(i),'w','w',1);
+    end
+end
+drawnow
+
+%% draw the generators
+if ~simple
+    for i = 1:size(ps.gen,1)
+        P = ps.gen(i,C.ge.P)/ps.baseMVA;
+        if P>0
+            gen_bus_i = ps.bus_i(ps.gen(i,1));
+            gx = x(gen_bus_i);
+            gy = y(gen_bus_i);
+            diameter = sqrt(abs(P))*circle_size;
+            drawcircle(gx,gy,diameter,'g','g',1);
+            if ps.bus(gen_bus_i,C.bu.type)==C.REF || ps.gen(i,C.ge.type)==C.REF
+                text(gx,gy,'R','HorizontalAlignment','center');
+            end
+        elseif P<0
+            text(gx,gy,'?','HorizontalAlignment','center');
+        end
+    end
+    drawnow
+end
+
+%% draw the loads
+if ~simple
+    for i = 1:size(ps.shunt,1)
+        P = ps.shunt(i,C.sh.P)/ps.baseMVA*ps.shunt(i,C.sh.factor);
+        sh_bus_i = ps.bus_i(ps.shunt(i,1));
+        sx = x(sh_bus_i);
+        sy = y(sh_bus_i);
+        drawtriangle(sx,sy,'r',abs(P)*triangle_size,1);
+    end
+    drawnow
+end
+
+%% show bus nos
+if show_bus_nos
+    for i=1:n
+        text(x(i),y(i),num2str(ps.bus(i,1)),'HorizontalAlignment','center');
+    end
+end
+
+return
+
+%% functions
+function xp = normalize(x)
+% simple normalization to the range [0,1]
+xp = x - min(x);
+xp = xp/max(xp);
+
+% draw a line with a given thickness
+function drawline(X,Y,color,width)
+
+dx = X(2) - X(1);
+dy = Y(2) - Y(1);
+ortho = [-dy dx]/sqrt(dx^2 + dy^2);
+w = width/2;
+
+p = [[X(1) Y(1)] + ortho*w;
+     [X(1) Y(1)] - ortho*w;
+     [X(2) Y(2)] - ortho*w;
+     [X(2) Y(2)] + ortho*w;];
+
+patch(p(:,1),p(:,2),color,'EdgeColor',color);
+
+% draw a circle
+function drawcircle(x,y,diameter,face_color,border_color,alpha)
+
+if nargin<5
+    border_color = face_color;
+end
+
+angles = (0:pi/12:2*pi)';
+
+r = diameter/2;
+dy = sin(angles)*r;
+dx = cos(angles)*r;
+
+patch( x+dx, y+dy, face_color ,'EdgeColor',border_color,'FaceAlpha',alpha);
+
+% draw a triangle
+function drawtriangle(x,y,color,area,alpha)
+
+cos30 = cos(pi/6);
+w = sqrt(2*area/cos30);
+h = w*cos30;
+
+dx = [-w/2 0 w/2];
+dy = [h/2 -h/2 h/2];
+
+patch( x+dx, y+dy, color,'EdgeColor',color,'FaceAlpha',alpha);
+
