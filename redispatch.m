@@ -3,6 +3,13 @@ function [out1,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_limits,verbose
 % usage: [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_limits,verbose)
 %  or more simply:
 % ps = redispatch(ps,sub_grids,ramp_limits,verbose)
+% 
+% Inputs:
+%  ps - the case data
+%  sub_grids - an nx1 vector of integers indication which island each bus
+%   is in
+%  ramp_limits - an mx1 vector of up/down ramp limits for the system
+%  verbose - flag for output
 
 C = psconstants;
 EPS = 1e-6;
