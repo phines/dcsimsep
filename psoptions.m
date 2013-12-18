@@ -36,6 +36,7 @@ opt.sim.stop_on_sep = false;
 opt.sim.stop_threshold = 0; % the fraction of nodes in the giant component, or load still connected, at which to stop the simulation
 opt.sim.fast_ramp_mins = 1; % the minimum minutes of ramping that generators are allowed to do without load shedding
 opt.sim.use_control = 0;
+opt.sim.dt_max_default = 60; % maximum amount of time between dcsimsep iterations
 % legacy
 opt.simdc = opt.sim;
 

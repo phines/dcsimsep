@@ -1,4 +1,4 @@
-function [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,verbose,test_trivial)
+function [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,verbose,test_trivial)
 % An emergency control function to adjust load, based on current measured
 %  flows
 % usage: [delta_df,delta_Pg] = emergency_opf(ps,measured_flow,verbose)
@@ -20,14 +20,15 @@ f_over_cost = 1000;
 
 % check the inputs
 if nargin<3, error('need at least 3 inputs'); end
+% number of buses in the system
+n = size(ps.bus,1);
 if nargin<4, ramp_limits = ps.gen(:,C.ge.Pmax); end
-if nargin<5, verbose = true; end
-if nargin<6, test_trivial=false; end
+if nargin<5, comm_status = true(n,1); end
+if nargin<6, verbose = true; end
+if nargin<7, test_trivial=false; end
 
 % display something
 if verbose, disp('Doing prep work');end
-% number of buses in the system
-n = size(ps.bus,1);
 % collect load data
 D = ps.bus_i(ps.shunt(:,1)); % load bus locations
 nd = length(D);
@@ -51,8 +52,14 @@ T = full(ps.bus_i(ps.branch(br_st,2)));
 X = ps.branch(br_st,C.br.X);
 inv_X = 1./X;
 measured_flow_pu = measured_flow(br_st) / ps.baseMVA;
+measured_flow_pu(isnan(measured_flow_pu)) = 0;
 flow_max = ps.branch(br_st,C.br.rateB) / ps.baseMVA; % in per unit
 m = length(F); % number of transmission lines in the system
+% process the comm_status
+buses = (1:n)';
+comm_connected_buses = buses(comm_status);
+is_G_conn = ismember(G,comm_connected_buses);
+is_D_conn = ismember(D,comm_connected_buses);
 
 %% set up an index so that we can find things
 ix.x.d_theta = (1:n);
@@ -65,10 +72,10 @@ ix.nx = n + ng + nd + m;
 x_min = zeros(ix.nx,1)-Inf;
 x_max = zeros(ix.nx,1)+Inf;
 % for dPg
-x_min(ix.x.dPg) = Pmin - Pg0;
-x_max(ix.x.dPg) = Pmax - Pg0;
+x_min(ix.x.dPg) = min(Pmin - Pg0,0).*is_G_conn;
+x_max(ix.x.dPg) = (Pmax - Pg0).*is_G_conn;
 % for dPd
-x_min(ix.x.dPd) = -Pd0;
+x_min(ix.x.dPd) = min(-Pd0,0).*is_D_conn;
 x_max(ix.x.dPd) = 0;
 % for f_over
 x_min(ix.x.f_over) = 0;
@@ -131,12 +138,13 @@ b_ineq = [b_flow_1;-b_flow_2];
 %% if requested test the trivial solution
 if test_trivial
     x_test = zeros(ix.nx,1);
-    theta = ps.bus(:,C.bu.Vang) * pi/180;
-    x_test(ix.x.d_theta) = -theta;
-    x_test(ix.x.dPd) = -Pd0;
-    x_test(ix.x.dPg) = -Pg0;
+    x_test(ix.x.d_theta) = 0;
+    x_test(ix.x.dPd) = 0;
+    x_test(ix.x.dPg) = 0;
+    x_test(ix.x.f_over) = abs(measured_flow_pu);
     disp('X bounds');
     violation = ~(x_min-EPS<x_test & x_test<x_max+EPS);
+    %violation = ~(x_test<x_max+EPS);
     disp([x_min x_test x_max violation])
     if any(violation)
         error('Trivial solution doesn''t work');
@@ -148,9 +156,9 @@ if test_trivial
         error('Trivial solution doesn''t work');
     end
     disp('Inequality cons');
-    b_flow = A_flow*x_test;
-    violation = ~(b_flow_left-EPS<b_flow & b_flow<b_flow_right+EPS);
-    disp([b_flow_left b_flow b_flow_right violation])
+    Ax = A_ineq*x_test;
+    violation = ~(Ax<=(b_ineq+EPS));
+    disp([Ax b_ineq violation]);
     if any(violation)
         error('Trivial solution doesn''t work');
     end
@@ -160,7 +168,7 @@ end
 if verbose
     disp('Solving the problem');
 end
-[x_star,fval,exitflag,output] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+[x_star,~,exitflag,~] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
 
 %% check and process the solution
 if exitflag==1
@@ -169,6 +177,7 @@ if exitflag==1
     delta_Pg = delta_Pg_pu * ps.baseMVA;
     delta_Pd = delta_Pd_pu * ps.baseMVA;
 else
+    keyboard
     if verbose
         disp('Optimization failed');
         keyboard

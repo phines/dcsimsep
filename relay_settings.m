@@ -14,7 +14,7 @@ m = size(ps.branch,1);
 %ns = size(ps.shunt);
 %nbr = size(ps.branch);
 F = ps.bus_i(ps.branch(:,1));
-T = ps.bus_i(ps.branch(:,2));
+%T = ps.bus_i(ps.branch(:,2));
 
 %% prepare output
 relay = [];
@@ -32,25 +32,25 @@ end
 %% add simple time overcurrent relays
 if overcurrent
     relay_oc_f = zeros(m,C.re.cols);
-    relay_oc_t = zeros(m,C.re.cols);
+    %relay_oc_t = zeros(m,C.re.cols);
     
     % typ
     relay_oc_f(:,C.re.type) = C.re.oc;
-    relay_oc_t(:,C.re.type) = C.re.oc;
+    %relay_oc_t(:,C.re.type) = C.re.oc;
     
     % relay locations
     relay_oc_f(:,C.re.branch_loc) = (1:m)';
-    relay_oc_t(:,C.re.branch_loc) = (1:m)';
     relay_oc_f(:,C.re.bus_loc)    = bus_nos(F);
-    relay_oc_t(:,C.re.bus_loc)    = bus_nos(T);
+    %relay_oc_t(:,C.re.branch_loc) = (1:m)';
+    %relay_oc_t(:,C.re.bus_loc)    = bus_nos(T);
     
     % settings
     Imax = ps.branch(:,C.br.rateB) / ps.baseMVA;
     overload_max = Imax * 1.5 * 5; % 5 seconds at a 50% overload produces a trip
     relay_oc_f(:,C.re.setting1)  = Imax;
     relay_oc_f(:,C.re.threshold) = overload_max;
-    relay_oc_t(:,C.re.setting1)  = Imax;
-    relay_oc_t(:,C.re.threshold) = overload_max;
+    %relay_oc_t(:,C.re.setting1)  = Imax;
+    %relay_oc_t(:,C.re.threshold) = overload_max;
     
     %relay = [relay;
     %    relay_oc_f;

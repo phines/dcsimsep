@@ -16,9 +16,9 @@ EPS = 1e-6;
 n = size(ps.bus,1);
 
 % check the inputs
-if nargin<2, sub_grids=ones(n,1); end
+if nargin<2||isempty(sub_grids), sub_grids=ones(n,1); end
 ge_status = ps.gen(:,C.ge.status)==1;
-if nargin<3, ramp_limits=ps.gen(:,C.ge.Pmax).*ge_status; end
+if nargin<3||isempty(ramp_limits), ramp_limits=ps.gen(:,C.ge.Pmax).*ge_status; end
 if nargin<4, verbose=true; end
 
 % collect the load data
@@ -34,7 +34,6 @@ Pg  = Pg0;
 Pmax = min(ps.gen(:,C.ge.Pmax),Pg+ramp_limits).*ge_status;
 Pmin = max(ps.gen(:,C.ge.Pmin),Pg-ramp_limits).*ge_status;
 if any(Pg<Pmin-EPS) || any(Pg>Pmax+EPS)
-    keyboard
     error('Generation outside of Pmin/Pmax');
 end
 
