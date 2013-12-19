@@ -84,7 +84,7 @@ end
 %ramp_rate( (Pg<EPS) | (~ge_status) ) = 0; % plants that are shut down cannot ramp
 ramp_rate( ~ge_status ) = 0;
 % calculate the power flow
-ps = dcpf(ps,[],false); % this one should not need to do any redispatch, just line flow calcs
+ps = dcpf(ps,[],false,opt.verbose); % this one should not need to do any redispatch, just line flow calcs
 flow = ps.branch(:,C.br.Pf);
 if nargout>5
     flows = flow;
@@ -146,7 +146,7 @@ while t < t_max
     end
     n_sub_old = n_sub;
     % run the power flow and record the flow
-    ps = dcpf(ps,sub_grids,true);
+    ps = dcpf(ps,sub_grids,true,opt.verbose);
     if any(ps.gen(:,C.ge.Pg)>ps.gen(:,C.ge.Pmax)+EPS), error('Pg is out of bounds'); end
     flow  = ps.branch(:,C.br.Pf);
     
@@ -173,7 +173,10 @@ while t < t_max
          % 2,0 etc...
         if exist(comm_status_file,'file')
             data = csvread(comm_status_file);
-            comm_status = data(:,2);
+            comm_status = (data(:,2)==1);
+            if length(comm_status)~=n
+                error('Wrong number of items in comm status file');
+            end
         else
             comm_status = true(n,1);
         end
@@ -181,26 +184,40 @@ while t < t_max
         is_br_readable = comm_status(F) | comm_status(T);
         measured_flow = nan(m,1);
         measured_flow(is_br_readable) = flow(is_br_readable);
-        branch_st = ps.branch(:,C.br.status);
+        branch_st = ps.branch(is_br_readable,C.br.status);
         % if there are overloads in the system, try to mitigate them
         if any(abs(measured_flow)>flow_max)
-            % Use the data to choose "optimal" decisions
+            % Check the mismatch
+            mis_old = total_P_mismatch(ps);
+            % Figure out the ramp rate
             ramp_dt = min(dt,dt_max); % the amount of generator ramping time to allow
             max_ramp = ramp_rate_emergency*ramp_dt;
-            [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,max_ramp,opt.verbose);
-            %[delta_Pd,delta_Pg] = emergency_control(ps,sub_grids,max_ramp,measured_flow,comm_status,opt.verbose);
-            
-            % Implement the load and generator control
-            Pg_new = ps.gen(:,C.ge.P) + delta_Pg;
-            ps.gen(:,C.ge.P) = max(Pg_min,min(Pg_new,Pg_max)); % implement Pg
-            % compute the new load factor
+            % Find the optimal load/gen shedding
+            [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,max_ramp,comm_status,opt.verbose);
+            % Compute the new amount of generation
+            Pg_new = ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status) + delta_Pg;
+            % Compute the new load factor
             delta_lf = delta_Pd./ps.shunt(:,C.sh.P);
+            delta_lf(isnan(delta_lf)) = 0;
             lf_new = ps.shunt(:,C.sh.factor) + delta_lf;
+            % Implement the results
+            ps.gen(:,C.ge.P) = max(Pg_min,min(Pg_new,Pg_max)); % implement Pg
             ps.shunt(:,C.sh.factor) = max(0,min(lf_new,1));
+            % Get the new mismatch
+            mis_new = total_P_mismatch(ps);
+            if abs(mis_old)>EPS || abs(mis_new)>EPS
+                diff = max(Pg_min,min(Pg_new,Pg_max))-Pg_new;
+                p = find(abs(diff)>EPS);
+                [Pg_min(p) Pg_new(p) Pg_max(p)]
+                keyboard
+            end
+            % Set the max time to 60 seconds so that we don't take a long
+            % time step
             dt_max = 60;
             % run dcpf again
             if any(abs(delta_Pd)>EPS)
-                ps = dcpf(ps,sub_grids,true);
+                ps_old = ps;
+                ps = dcpf(ps,sub_grids,true,opt.verbose);
                 if any(ps.gen(:,C.ge.Pg)>ps.gen(:,C.ge.Pmax)+EPS), error('Pg is out of bounds'); end
             end
        end

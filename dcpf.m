@@ -1,5 +1,5 @@
-function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding)
-% usage: [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding)
+function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding,verbose)
+% usage: [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding,verbose)
 % a very simple dc power flow calculation
 % if sub_grids are not specified, they are calculated from the graph.
 
@@ -7,7 +7,7 @@ function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding)
 if nargin<1, error('ps structure must be specified'); end;
 if nargin<2, sub_grids = []; end
 if nargin<3, load_shedding=false; end
-verbose = false;
+if nargin<4, verbose = false; end
 
 % some constants
 C = psconstants;
@@ -74,6 +74,16 @@ for g = 1:n_sub
     if length(ref)>1
         error('multiple ref buses');
     end
+    % measure the load imbalance in the system
+    if verbose
+        Pd_total = sum(Pd_full(subset));
+        Pg_total = sum(Pg_full(subset));
+        imbalance = Pd_total - Pg_total;
+        if abs(imbalance)>EPS
+            fprintf('DCPF: The total imbalanced in the system is %.2f pu\n',imbalance);
+            keyboard
+        end
+    end
     % check for a blackout in this subgrid
     if sum(Pd_full(subset))<=0 || sum(Pg_max_full(subset))<=0 %|| Pg_full(ref)<=0
         if load_shedding
@@ -136,7 +146,6 @@ end
 ps.gen(:,C.ge.Qg) = 0; % dcpf assumption...
 % record the load factor
 ps.shunt(:,C.sh.factor) = sf;
-
 
 % record the B matrix
 ps.B = B;

@@ -28,11 +28,11 @@ if nargin<6, verbose = true; end
 if nargin<7, test_trivial=false; end
 
 % display something
-if verbose, disp('Doing prep work');end
+if verbose, disp('  Doing prep work for emergency control');end
 % collect load data
 D = ps.bus_i(ps.shunt(:,1)); % load bus locations
 nd = length(D);
-Pd0 = ps.shunt(:,C.sh.P) ./ ps.baseMVA; % in per unit
+Pd0 = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor) ./ ps.baseMVA; % in per unit
 % collect generator data
 G = ps.bus_i(ps.gen(:,1));  % gen bus locations
 ng = length(G);
@@ -40,12 +40,13 @@ ge_status = ps.gen(:,C.ge.status)==1;
 Pg0 = ps.gen(:,C.ge.P).*ge_status./ ps.baseMVA; % in per unit
 Pg = Pg0;
 ramp_limits_pu = ramp_limits/ps.baseMVA;
-Pmax = Pg0; % < this could change
-Pmin = max(zeros(ng,1),Pg0-ramp_limits_pu);
-if any(Pg<Pmin-EPS) || any(Pg>Pmax+EPS)
+Pg_max = Pg0; % < this could change
+Pg_min = max(0,max(Pg0-ramp_limits_pu,ps.gen(:,C.ge.Pmin).*ge_status./ps.baseMVA));
+if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
     error('Generation outside of Pmin/Pmax');
 end
 % collect transmission line data
+branch_st(isnan(branch_st)) = 1; % if the comm system has made this unreadable, assume branch is closed
 br_st = (branch_st==1);
 F = full(ps.bus_i(ps.branch(br_st,1)));
 T = full(ps.bus_i(ps.branch(br_st,2)));
@@ -72,8 +73,8 @@ ix.nx = n + ng + nd + m;
 x_min = zeros(ix.nx,1)-Inf;
 x_max = zeros(ix.nx,1)+Inf;
 % for dPg
-x_min(ix.x.dPg) = min(Pmin - Pg0,0).*is_G_conn;
-x_max(ix.x.dPg) = (Pmax - Pg0).*is_G_conn;
+x_min(ix.x.dPg) = min(Pg_min - Pg0,0).*is_G_conn;
+x_max(ix.x.dPg) = (Pg_max - Pg0).*is_G_conn;
 % for dPd
 x_min(ix.x.dPd) = min(-Pd0,0).*is_D_conn;
 x_max(ix.x.dPd) = 0;
@@ -166,7 +167,7 @@ end
 
 %% run the optimization
 if verbose
-    disp('Solving the problem');
+    disp('  Solving the emergency control problem');
 end
 [x_star,~,exitflag,~] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
 
@@ -176,6 +177,9 @@ if exitflag==1
     delta_Pg_pu = x_star(ix.x.dPg);
     delta_Pg = delta_Pg_pu * ps.baseMVA;
     delta_Pd = delta_Pd_pu * ps.baseMVA;
+    if verbose
+        disp('  Solved the emergency control problem');
+    end
 else
     keyboard
     if verbose
@@ -187,5 +191,17 @@ else
 end
 
 %% Debug stuff
+%double check that the result is within bounds
+Pg = Pg0 + delta_Pg_pu;
+if any( Pg+EPS < Pg_min | Pg > Pg_max+EPS )
+    error('Control results are outside of generator limits');
+    %p = find(Pg+EPS < Pg_min | Pg > Pg_max+EPS);
+    %[ x_min(ix.x.dPg(p)) Pg_min(p) delta_Pg(p) Pg0(p) Pg(p) Pg_max(p)]
+end
+Pd = Pd0 + delta_Pd_pu;
+if any( Pd0>0 & ( Pd < 0 | Pd > Pd0 ) )
+    error('Control results are outside of load limits');
+    %p = find( Pd0>0 & ( Pd < 0 | Pd > Pd0 ) )
+end
 %flow_pu = measured_flow_pu + A_flow * x_star;
 %keyboard
