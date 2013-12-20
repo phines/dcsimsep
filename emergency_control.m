@@ -199,7 +199,7 @@ if any( Pg+EPS < Pg_min | Pg > Pg_max+EPS )
     %[ x_min(ix.x.dPg(p)) Pg_min(p) delta_Pg(p) Pg0(p) Pg(p) Pg_max(p)]
 end
 Pd = Pd0 + delta_Pd_pu;
-if any( Pd0>0 & ( Pd < 0 | Pd > Pd0 ) )
+if any( Pd0>0 & ( Pd+EPS < 0 | Pd > Pd0+EPS ) )
     error('Control results are outside of load limits');
     %p = find( Pd0>0 & ( Pd < 0 | Pd > Pd0 ) )
 end
