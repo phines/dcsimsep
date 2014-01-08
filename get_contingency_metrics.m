@@ -42,7 +42,7 @@ is_overload = zeros(size(metric));
 %  (assumes the power flow was performed externally)
 flow = ps.branch(:,C.br.Pf)/ps.baseMVA;
 flow_max = ps.branch(:,C.br.rateA)/ps.baseMVA;
-if any(flow>flow_max)
+if any(flow>flow_max+EPS)
     error('flows');
 end
 base_woll_metric = sum( weights.*(flow./flow_max).^2 );

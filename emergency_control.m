@@ -46,7 +46,7 @@ if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
     error('Generation outside of Pmin/Pmax');
 end
 % collect transmission line data
-branch_st(isnan(branch_st)) = 1; % if the comm system has made this unreadable, assume branch is closed
+branch_st(isnan(branch_st)) = 1; % if we don't know otherwise, assume branch is closed
 br_st = (branch_st==1);
 F = full(ps.bus_i(ps.branch(br_st,1)));
 T = full(ps.bus_i(ps.branch(br_st,2)));
@@ -61,6 +61,11 @@ buses = (1:n)';
 comm_connected_buses = buses(comm_status);
 is_G_conn = ismember(G,comm_connected_buses);
 is_D_conn = ismember(D,comm_connected_buses);
+
+%% edit this code so that it operates separately on each sub-grid
+nodes = (1:n)';
+links = [F,T];
+[grid_no,n_sub] = findSubGraphs(nodes,links);
 
 %% set up an index so that we can find things
 ix.x.d_theta = (1:n);
@@ -82,9 +87,6 @@ x_max(ix.x.dPd) = 0;
 x_min(ix.x.f_over) = 0;
 x_max(ix.x.f_over) = Inf;
 % constrain one reference bus for each island
-nodes = (1:n)';
-links = [F,T];
-[grid_no,n_sub] = findSubGraphs(nodes,links);
 % choose a bus that is already closest to zero
 theta = ps.bus(:,C.bu.Vang) * pi / 180;
 for grid_i = 1:n_sub
@@ -181,11 +183,11 @@ if exitflag==1
         disp('  Solved the emergency control problem');
     end
 else
-    keyboard
     if verbose
-        disp('Optimization failed');
-        keyboard
+        disp('  Optimization failed');
     end
+    delta_Pg_pu = zeros(ng,1);
+    delta_Pd_pu = zeros(nd,1);
     delta_Pg = zeros(ng,1);
     delta_Pd = zeros(nd,1);
 end
@@ -204,4 +206,4 @@ if any( Pd0>0 & ( Pd+EPS < 0 | Pd > Pd0+EPS ) )
     %p = find( Pd0>0 & ( Pd < 0 | Pd > Pd0 ) )
 end
 %flow_pu = measured_flow_pu + A_flow * x_star;
-%keyboard
+

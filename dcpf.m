@@ -9,10 +9,13 @@ if nargin<2, sub_grids = []; end
 if nargin<3, load_shedding=false; end
 if nargin<4, verbose = false; end
 
+% initialize outputs
+n_sub = []; %#ok<NASGU>
+
 % some constants
 C = psconstants;
 ps = updateps(ps);
-EPS = 1e-6;
+EPS = 1e-5;
 
 % extract some data
 n = size(ps.bus,1);
@@ -26,7 +29,7 @@ D = ps.bus_i(ps.shunt(:,1));  % demand/shunt locations
 sf = ps.shunt(:,C.sh.status); % shunt factor, used for load shedding
 Pg_pu = ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status) / ps.baseMVA;
 Pg_max_pu = ps.gen(:,C.ge.Pmax).*ps.gen(:,C.ge.status) / ps.baseMVA;
-Pd_pu = ps.shunt(:,C.sh.P) / ps.baseMVA;
+Pd_pu = ps.shunt(:,C.sh.P).*sf / ps.baseMVA;
 
 % calculate the B matrix and initial theta
 theta = zeros(n,1);
@@ -41,7 +44,7 @@ B = sparse(F,T,-inv_X,n,n) + ...
 Pg_max_full = full(sparse(G,1,Pg_max_pu,n,1));
 Pg_full = full(sparse(G,1,Pg_pu,n,1));
 Pg_org  = Pg_full;
-Pd_full = full(sparse(D,1,Pd_pu.*sf,n,1));
+Pd_full = full(sparse(D,1,Pd_pu,n,1));
 net_gen = Pg_full - Pd_full;
 
 % find the ref bus
@@ -80,8 +83,7 @@ for g = 1:n_sub
         Pg_total = sum(Pg_full(subset));
         imbalance = Pd_total - Pg_total;
         if abs(imbalance)>EPS
-            fprintf('DCPF: The total imbalanced in the system is %.2f pu\n',imbalance);
-            keyboard
+            fprintf('DCPF: The total imbalanced in the system is %.4f pu\n',imbalance);
         end
     end
     % check for a blackout in this subgrid
@@ -103,7 +105,9 @@ for g = 1:n_sub
                 fprintf('dcpf found a blackout in subgrid %d of %d\n',g, n_sub);
             end
         else
-            error('Power flow failed to converge');
+            disp('Power flow failed to converge');
+            ps = [];
+            return
         end
         continue
     end

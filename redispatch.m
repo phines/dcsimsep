@@ -31,9 +31,9 @@ rr = ramp_limits;
 %ge_status = ps.gen(:,C.ge.status)==1;
 Pg0 = ps.gen(:,C.ge.P).*ge_status;
 Pg  = Pg0;
-Pmax = min(ps.gen(:,C.ge.Pmax),Pg+ramp_limits).*ge_status;
-Pmin = max(ps.gen(:,C.ge.Pmin),Pg-ramp_limits).*ge_status;
-if any(Pg<Pmin-EPS) || any(Pg>Pmax+EPS)
+Pg_max = min(ps.gen(:,C.ge.Pmax),Pg+ramp_limits).*ge_status;
+Pg_min = max(ps.gen(:,C.ge.Pmin),Pg-ramp_limits).*ge_status;
+if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
     error('Generation outside of Pmin/Pmax');
 end
 
@@ -65,7 +65,7 @@ for g = grid_list
     % if there is too much generation, ramp down generation
     while (Pg_sub-Pd_sub)>+EPS
         % figure out which generators can ramp down
-        ramp_set = find(Gsub & Pg>Pmin  & ge_status);
+        ramp_set = find(Gsub & Pg>Pg_min  & ge_status);
         if isempty(ramp_set) % break if no generators can ramp
             break
         end
@@ -80,7 +80,7 @@ for g = grid_list
             fprintf('#%d ',unique(ps.gen(ramp_set,C.ge.bus)));
             fprintf('\n');
         end
-        Pg(ramp_set) = min( max( Pmin(ramp_set), Pg(ramp_set)+rr(ramp_set)*factor ), Pg0(ramp_set) );
+        Pg(ramp_set) = min( max( Pg_min(ramp_set), Pg(ramp_set)+rr(ramp_set)*factor ), Pg0(ramp_set) );
         Pg_sub = sum(Pg(Gsub));
     end
     % if we still have too much, trip generators
@@ -113,7 +113,7 @@ for g = grid_list
     % if there is too little generation:
     while (Pg_sub-Pd_sub)<-EPS
         % figure out which generators can ramp up
-        ramp_set = find(Gsub & Pg<Pmax & ge_status);
+        ramp_set = find(Gsub & Pg<Pg_max & ge_status);
         if isempty(ramp_set) % break if no generators can ramp
             break
         end
@@ -128,7 +128,7 @@ for g = grid_list
             fprintf('#%d ',unique(ps.gen(ramp_set,C.ge.bus)));
             fprintf('\n');
         end
-        Pg(ramp_set) = min( Pg(ramp_set) + rr(ramp_set)*factor, Pmax(ramp_set) );
+        Pg(ramp_set) = min( Pg(ramp_set) + rr(ramp_set)*factor, Pg_max(ramp_set) );
         Pg_sub = sum(Pg(Gsub));
     end
     % if we still have too little, do load shedding
@@ -149,20 +149,21 @@ for g = grid_list
 end
 
 % debug check
-Pmax = min(ps.gen(:,C.ge.Pmax),Pg+ramp_limits).*ge_status;
-Pmin = max(ps.gen(:,C.ge.Pmin),Pg-ramp_limits).*ge_status;
-if any(Pg<Pmin-EPS) || any(Pg>Pmax+EPS)
+Pg_max = min(ps.gen(:,C.ge.Pmax),Pg+ramp_limits).*ge_status;
+Pg_min = max(ps.gen(:,C.ge.Pmin),Pg-ramp_limits).*ge_status;
+if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
     error('Generation outside of Pmin/Pmax');
 end
 
-% single output version
+% Check the number of outputs
 if nargout==1
+    % In single output version, out1=ps
     ps.shunt(:,C.sh.factor) = d_factor;
     ps.gen(:,C.ge.status) = ge_status;
     ps.gen(:,C.ge.P) = Pg;
     out1 = ps;
 else
-    % multiple output version
+    % in multiple output version, out1=Pg
     out1 = Pg;
 end
 

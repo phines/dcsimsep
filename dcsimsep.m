@@ -29,29 +29,21 @@ relay_outages = zeros(0,2);
 ps.relay = relay_settings(ps,false,true);
 % some constants
 dt_max = opt.sim.dt_max_default;
-t_max = 60*30;
+t_max = 60*30; % time limit for the simulation
 EPS = 1e-4;
-% 
-pid = feature('getpid');
 
-% comm status file name for emergency control
-comm_status_file = sprintf('/tmp/comm_status_%d.csv',pid);
-grid_status_file = sprintf('/tmp/grid_status_%d.csv',pid);
-
-% grab useful data
+% Grab some useful data
 C = psconstants;
 n = size(ps.bus,1);
-m = size(ps.branch,1);
+%m = size(ps.branch,1);
 F = ps.bus_i(ps.branch(:,1));
 T = ps.bus_i(ps.branch(:,2));
-flow_max = ps.branch(:,C.br.rateB);
 G = ps.bus_i(ps.gen(:,1));   % gen index
-Pmax = ps.gen(:,C.ge.Pmax);
 ge_status = ps.gen(:,C.ge.status);
+Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
+Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
 Pg   = ps.gen(:,C.ge.Pg).*ge_status;
 Pg0_sum = sum(Pg);
-Pg_max = ps.gen(:,C.ge.Pmax).*ge_status;
-Pg_min = ps.gen(:,C.ge.Pmin).*ge_status;
 D = ps.bus_i(ps.shunt(:,1)); % load index
 %NO_SEP = 0;
 BIG_SEP = 2;
@@ -59,14 +51,12 @@ BIG_SEP = 2;
 % set the power plant ramp rates
 ramp_rate = ps.gen(:,C.ge.ramp_rate_up)/60; % ramp rate in MW/second
 if all(ramp_rate==0)
-    ramp_rate_MW_per_min = max(1,Pmax*.05); % assume that all plants can ramp at 5% per minute. 
+    ramp_rate_MW_per_min = max(1,Pg_max*.05); % assume that all plants can ramp at 5% per minute. 
                                             % for a 100 MW plant, this
                                             % would be 5 MW/min. Reasonable
     ramp_rate = ramp_rate_MW_per_min/60;
 end
-% emergency ramp rate is faster
-ramp_rate_emergency = ramp_rate;
-% print the time:
+% Print the time
 if opt.verbose
     fprintf('------- t = 0.00 ----------\n');
 end
@@ -74,24 +64,29 @@ end
 ps = updateps(ps);
 br_st = ps.branch(:,C.br.status)~=0;
 % check to make sure that the base case is load balanced
-if abs(Pd0_sum - Pg0_sum)>EPS
+if opt.debug && abs(Pd0_sum - Pg0_sum)>EPS
     error('The base case power system is not load balanced');
 end
 [sub_grids,n_sub_old] = findSubGraphs(ps.bus(:,1),ps.branch(br_st,1:2));
 if n_sub_old>1
     error('The base case has more than one island');
 end
-%ramp_rate( (Pg<EPS) | (~ge_status) ) = 0; % plants that are shut down cannot ramp
-ramp_rate( ~ge_status ) = 0;
-% calculate the power flow
+% Find the ramp rate
+ramp_rate( ~ge_status ) = 0; % plants that are shut down cannot ramp
+% Check the mismatch
+mis = total_P_mismatch(ps);
+if opt.debug && abs(mis)>EPS, error('Base case has mismatch'); end
+% Calculate the power flow
 ps = dcpf(ps,[],false,opt.verbose); % this one should not need to do any redispatch, just line flow calcs
+% Get the power flow
 flow = ps.branch(:,C.br.Pf);
-if nargout>5
-    flows = flow;
+% Record it if needed
+if nargout>5, flows = flow; end
+% Error check
+Pg = ps.gen(:,C.ge.Pg);
+if opt.debug && any( Pg<Pg_min | Pg>Pg_max )
+    error('Pg is out of bounds');
 end
-
-% error check
-if any(ps.gen(:,C.ge.Pg)>(ps.gen(:,C.ge.Pmax)+EPS)), disp(br_outages); error('Pg is out of bounds'); end
 
 % Step 2. Apply exogenous outages
 t = 1;
@@ -99,19 +94,19 @@ if opt.verbose
     fprintf('------- t = %.3f ----------\n',t);
     fprintf('Exogenous events:\n');
 end
-% branch outages
+% Apply the branch outages
 if ~isempty(br_outages)
     ps.branch(br_outages,C.br.status) = 0;
     if opt.verbose
         fprintf(' Removed branch %d\n',br_outages);
     end
 end
-% bus outages
+% Apply the bus outages
 if ~isempty(bus_outages)
     for i=1:length(bus_outages)
         bus_no = bus_outages(i);
         bus_ix = ps.bus_i(bus_no);
-        if isempty(bus_ix) || bus_ix==0
+        if opt.debug && isempty(bus_ix) || bus_ix<=0 || bus_ix>=n
             error('%d is not a valid bus number',bus_no);
         end
         br_set = (F==bus_ix) | (T==bus_ix);
@@ -125,20 +120,25 @@ if ~isempty(bus_outages)
     end
 end
 
+% Begin the main while loop for DCSIMSEP
+it_no = 1;
 dt = 10.00; % This initial time step sets the quantity of initial gen ramping.
 while t < t_max
     % Step 3. Find sub-grids in the network and check for major separation
     [sep,sub_grids,n_sub,p_out,busessep] = check_separation(ps,opt.sim.stop_threshold,opt.verbose);
     
     % Step 4. redispatch & run the power flow
-    % if there are new islands, redispatch the generators
+    %  if there are new islands, redispatch the generators
     if n_sub>n_sub_old
-        ramp_dt = max(dt,opt.sim.fast_ramp_mins*60); % the amount of generator ramping time to allow
-        max_ramp = ramp_rate*ramp_dt;
+        ramp_dt = max(dt,opt.sim.fast_ramp_mins*60); % the amount of 
+           % generator ramping time to allow. 
+        max_ramp = ramp_rate*ramp_dt; 
         [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,max_ramp,opt.verbose);
-        % error check:
-        if any(Pg>ps.gen(:,C.ge.Pmax)+EPS), error('Pg is out of bounds'); end
-        % implement the changes to load and generation
+        % Error check:
+        Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
+        Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
+        if opt.debug && any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
+        % Implement the changes to load and generation
         ps.shunt(:,C.sh.factor) = d_factor;
         ps.gen(:,C.ge.status) = ge_status;
         ps.gen(:,C.ge.P) = Pg;
@@ -147,80 +147,20 @@ while t < t_max
     n_sub_old = n_sub;
     % run the power flow and record the flow
     ps = dcpf(ps,sub_grids,true,opt.verbose);
-    if any(ps.gen(:,C.ge.Pg)>ps.gen(:,C.ge.Pmax)+EPS), error('Pg is out of bounds'); end
+    Pg = ps.gen(:,C.ge.Pg);
+    if opt.debug && any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
+    % Extract and record the flows
     flow  = ps.branch(:,C.br.Pf);
-    
     if nargout>5
         flows = [flows flow]; %#ok<AGROW>
     end
-    % error check:
-    if any(ps.gen(:,C.ge.Pg)>ps.gen(:,C.ge.Pmax)+EPS), error('Pg is out of bounds'); end
 
     % Step 4a. Take control actions if needed.
     if opt.sim.use_control
-        % write out the status of each node in the network
-        %  output file name is grid_status_{pid}.csv
-        node_has_power = find_buses_with_power(ps,sub_grids);
-        csvwrite(grid_status_file,[ps.bus(:,1) node_has_power]);
-        
-        % call python comms code
-         % send the matlab pid to python code
-
-        % check the status of the comm network
-         % read the file /tmp/comm_status_{pid}.csv
-         % busno,comm?
-         % 1,1
-         % 2,0 etc...
-        if exist(comm_status_file,'file')
-            data = csvread(comm_status_file);
-            comm_status = (data(:,2)==1);
-            if length(comm_status)~=n
-                error('Wrong number of items in comm status file');
-            end
-        else
-            comm_status = true(n,1);
-        end
-        % Read power system data (flow) from each operating node
-        is_br_readable = comm_status(F) | comm_status(T);
-        measured_flow = nan(m,1);
-        measured_flow(is_br_readable) = flow(is_br_readable);
-        branch_st = ps.branch(is_br_readable,C.br.status);
-        % if there are overloads in the system, try to mitigate them
-        if any(abs(measured_flow)>flow_max)
-            % Check the mismatch
-            mis_old = total_P_mismatch(ps);
-            % Figure out the ramp rate
-            ramp_dt = min(dt,dt_max); % the amount of generator ramping time to allow
-            max_ramp = ramp_rate_emergency*ramp_dt;
-            % Find the optimal load/gen shedding
-            [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,max_ramp,comm_status,opt.verbose);
-            % Compute the new amount of generation
-            Pg_new = ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status) + delta_Pg;
-            % Compute the new load factor
-            delta_lf = delta_Pd./ps.shunt(:,C.sh.P);
-            delta_lf(isnan(delta_lf)) = 0;
-            lf_new = ps.shunt(:,C.sh.factor) + delta_lf;
-            % Implement the results
-            ps.gen(:,C.ge.P) = max(Pg_min,min(Pg_new,Pg_max)); % implement Pg
-            ps.shunt(:,C.sh.factor) = max(0,min(lf_new,1));
-            % Get the new mismatch
-            mis_new = total_P_mismatch(ps);
-            if abs(mis_old)>EPS || abs(mis_new)>EPS
-                diff = max(Pg_min,min(Pg_new,Pg_max))-Pg_new;
-                p = find(abs(diff)>EPS);
-                [Pg_min(p) Pg_new(p) Pg_max(p)]
-                keyboard
-            end
-            % Set the max time to 60 seconds so that we don't take a long
-            % time step
-            dt_max = 60;
-            % run dcpf again
-            if any(abs(delta_Pd)>EPS)
-                ps_old = ps;
-                ps = dcpf(ps,sub_grids,true,opt.verbose);
-                if any(ps.gen(:,C.ge.Pg)>ps.gen(:,C.ge.Pmax)+EPS), error('Pg is out of bounds'); end
-            end
-       end
+        % Compute and implement emergency control actions
+        %  Note that this code also interfaces with a python comm. model,
+        %  if requested in the options structure
+        ps = take_control_actions(ps,sub_grids,ramp_rate,dt,it_no,opt);
     end
     % Step 5. Update relays
     [ps.relay,br_out_new,dt,n_over] = update_relays(ps,opt.verbose,dt_max);
@@ -282,21 +222,28 @@ while t < t_max
         fprintf(' Branch %d triped on overcurrent\n',br_out_new);
     end
     
-    % Return to step 3.
+    % Increment the counter and return to step 3.
+    it_no = it_no + 1;
 end
 
 % do a final redispatch just to make sure
 [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_rate*dt,opt.verbose);
-% error check:
-if Pg>ps.gen(:,C.ge.Pmax)+EPS, error('Pg is out of bounds'); end
+% Error check
+if opt.debug
+    Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
+    Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
+    if any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
+end
+% Implement
 ps.shunt(:,C.sh.factor) = d_factor;
 ps.gen(:,C.ge.status) = ge_status;
 ps.gen(:,C.ge.P) = Pg;
+% Compute the amount of load lost
 Pd = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
 MW_lost = sum(Pd0) - sum(Pd);
-n_overloads = sum(ps.branch(:,C.br.Pf)>ps.branch(:,C.br.rateB));
-
+% Print something
 if opt.verbose
+    n_overloads = sum(ps.branch(:,C.br.Pf)>ps.branch(:,C.br.rateB));
     fprintf('-------------- t = %7.3f -----------------\n',t);
     fprintf(' Simulation complete\n');
     fprintf('  %d emergency (rateB) overloads remain\n',n_overloads);
