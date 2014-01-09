@@ -42,10 +42,11 @@ system(cmd);
 %% run a single case
 load BOpairs
 opt.verbose = true;
-i = 23;
+i = 247;
 br_outages = BOpairs(i,:);
 [~,relay_outages,MW_lost_1(i),p_out,busessep,flows] = dcsimsep(ps,br_outages,[],opt);
 
+return
 %% Run several cases
 opt.verbose = false;
 

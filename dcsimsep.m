@@ -143,12 +143,22 @@ while t < t_max
         ps.gen(:,C.ge.status) = ge_status;
         ps.gen(:,C.ge.P) = Pg;
         ramp_rate(~ge_status)=0; % make sure that failed generators don't ramp
+        % debug
+        if Pg(15)<EPS && ge_status(15)
+            keyboard
+        end
     end
     n_sub_old = n_sub;
     % run the power flow and record the flow
     ps = dcpf(ps,sub_grids,true,opt.verbose);
-    Pg = ps.gen(:,C.ge.Pg);
-    if opt.debug && any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
+    if opt.debug
+        % Check that
+        ge_status = ps.gen(:,C.ge.status);
+        Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
+        Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
+        Pg = ps.gen(:,C.ge.Pg);
+        if any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds');end
+    end
     % Extract and record the flows
     flow  = ps.branch(:,C.br.Pf);
     if nargout>5
