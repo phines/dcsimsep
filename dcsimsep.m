@@ -106,7 +106,7 @@ if ~isempty(bus_outages)
     for i=1:length(bus_outages)
         bus_no = bus_outages(i);
         bus_ix = ps.bus_i(bus_no);
-        if opt.debug && isempty(bus_ix) || bus_ix<=0 || bus_ix>=n
+        if opt.debug && isempty(bus_ix) || bus_ix<=0 || bus_ix>n
             error('%d is not a valid bus number',bus_no);
         end
         br_set = (F==bus_ix) | (T==bus_ix);
