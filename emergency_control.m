@@ -1,12 +1,12 @@
-function [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,verbose,test_trivial)
+function [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
 % An emergency control function to adjust load, based on current measured
 %  flows
-% usage: [delta_df,delta_Pg] = emergency_opf(ps,measured_flow,verbose)
+% usage: [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
 % inputs:
 %  ps - power systems data
 %  measured_flow - the amount of flow (in MW/MVA) on each transmission line
 %  branch_st - the status of the transmission lines
-%  verbose - a binary indicating whether to print stuff about what is going
+%  opt.verbose - a binary indicating whether to print stuff about what is going
 %   on.
 %  
 % outputs:
@@ -24,11 +24,11 @@ if nargin<3, error('need at least 3 inputs'); end
 n = size(ps.bus,1);
 if nargin<4, ramp_limits = ps.gen(:,C.ge.Pmax); end
 if nargin<5, comm_status = true(n,1); end
-if nargin<6, verbose = true; end
+if nargin<6, opt.verbose = true; end
 if nargin<7, test_trivial=false; end
 
 % display something
-if verbose, disp('  Doing prep work for emergency control');end
+if opt.verbose, disp('  Doing prep work for emergency control');end
 % collect load data
 D = ps.bus_i(ps.shunt(:,1)); % load bus locations
 nd = length(D);
@@ -168,10 +168,21 @@ if test_trivial
 end
 
 %% run the optimization
-if verbose
+if opt.verbose
     disp('  Solving the emergency control problem');
 end
-[x_star,~,exitflag,~] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+switch opt.optimizer
+    case 'cplex'
+        [x_star,~,exitflag,~] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+    case 'linprog'
+        [x_star,~,exitflag,~] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+    case 'mexosi'
+        A = [A_pf;A_flow_1;A_flow_2];
+        b_max = [b_pf;b_flow_1;b_flow_2];
+        b_min = -Inf(size(b_max));
+        [x_star,~,exitflag] = osi(cost,x_min,x_max,A,b_min,b_max);
+        %[x_star,~,exitflag,~] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+end
 
 %% check and process the solution
 if exitflag==1
@@ -179,11 +190,11 @@ if exitflag==1
     delta_Pg_pu = x_star(ix.x.dPg);
     delta_Pg = delta_Pg_pu * ps.baseMVA;
     delta_Pd = delta_Pd_pu * ps.baseMVA;
-    if verbose
+    if opt.verbose
         disp('  Solved the emergency control problem');
     end
 else
-    if verbose
+    if opt.verbose
         disp('  Optimization failed');
     end
     delta_Pg_pu = zeros(ng,1);

@@ -12,6 +12,8 @@ opt.verbose = 1;
 %opt.seecascade = 0;
 opt.debug = true;
 
+opt.optimizer = 'cplex'; % or cplex, mexosi
+
 %% power flow options
 opt.pf.tolerance = 1e-8; % convergence tolerance
 opt.pf.max_iters = 20; % max power flow iterations
@@ -27,7 +29,6 @@ opt.opf.generator_commitment = 0; % switch generators on/off using MIP
 opt.opf.branch_switching = 0;     % switch branches on/off using MIP
 opt.opf.rate = C.br.rateA;
 opt.opf.contg_rate = C.br.rateB;
-
 
 %% time-domain simulation options options
 opt.sim.ramp_frac = 0.05; % fraction of generator allowed to ramp between generations

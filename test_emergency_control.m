@@ -2,7 +2,9 @@ clear all
 %% Global constants
 C = psconstants;
 opt = psoptions;
-verbose = 1;
+opt.verbose = 1;
+verbose = opt.verbose;
+opt.optimizer = 'mexosi';
 EPS = 1e-6;
 
 %% create the case
@@ -47,7 +49,7 @@ while 1
     title('Before');
     pause
     % optimize
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,verbose)
+    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt)
     % implement the control
     % Implement the load and generator control
     Pg_new = ps.gen(:,C.ge.P) + delta_Pg;
@@ -110,7 +112,7 @@ while 1
     title('Before');
     pause
     % optimize
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,verbose)
+    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt)
     % implement the control
     % Implement the load and generator control
     Pg_new = ps.gen(:,C.ge.P) + delta_Pg;
@@ -166,7 +168,7 @@ while 1
     end
     % optimize
     comm_status = true(n,1);
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,verbose);
+    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt);
     % Implement the load and generator control
     Pg_new = ps.gen(:,C.ge.P) + delta_Pg;
     ps.gen(:,C.ge.P) = max(Pg_min,min(Pg_new,Pg_max)); % implement Pg

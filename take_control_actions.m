@@ -87,7 +87,7 @@ if any(abs(measured_flow)>flow_max)
     ramp_dt = min(dt,opt.sim.dt_max_default); % the amount of generator ramping time to allow
     max_ramp = ramp_rate*ramp_dt;
     % Find the optimal load/gen shedding
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,measured_branch_st,max_ramp,comm_status,opt.verbose);
+    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,measured_branch_st,max_ramp,comm_status,opt);
     % If emergency control says that we should do something:
     if any(abs(delta_Pd)>EPS)
         % Compute the new amount of generation
