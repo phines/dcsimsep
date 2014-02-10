@@ -17,6 +17,8 @@ flow_max = ps.branch(:,C.br.rateB);
 ge_status = ps.gen(:,C.ge.status);
 Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
 Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
+G = ps.bus_i(ps.gen(:,1));
+D = ps.bus_i(ps.shunt(:,1));
 
 % If we are to use the comm model do:
 if opt.sim.use_comm_model
@@ -31,7 +33,8 @@ if opt.sim.use_comm_model
 
     % Write out the status of each node in the network
     %  output file name is grid_status_{pid}.csv
-    node_has_power = find_buses_with_power(ps,sub_grids);
+    node_has_power = find_buses_with_power(ps,opt);
+    ps.bus(:,C.bu.status) = node_has_power;
     % Write a header to the file
     fileID = fopen(grid_status_file,'w');
     fprintf(fileID,'bus,status\n');
@@ -75,6 +78,7 @@ else
     measured_branch_st = ps.branch(:,C.br.status);
     comm_status = true(n,1);
 end
+comm_failed_set = find(~comm_status);
 
 % if there are overloads in the system, try to mitigate them
 if any(abs(measured_flow)>flow_max)
@@ -90,6 +94,11 @@ if any(abs(measured_flow)>flow_max)
     [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,measured_branch_st,max_ramp,comm_status,opt);
     % If emergency control says that we should do something:
     if any(abs(delta_Pd)>EPS)
+        % check to see which loads/gens can be controlled
+        is_D_failed = ismember(D,comm_failed_set);
+        delta_Pd(is_D_failed) = 0;
+        is_G_failed = ismember(G,comm_failed_set);
+        delta_Pg(is_G_failed) = 0;
         % Compute the new amount of generation
         Pg_new = ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status) + delta_Pg;
         % Error checking

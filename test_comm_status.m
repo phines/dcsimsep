@@ -12,8 +12,9 @@ opt.sim.stop_threshold = 0.00; % the fraction of nodes, at which to declare a ma
 opt.sim.fast_ramp_mins = 1;
 opt.sim.use_control = true;
 opt.sim.use_comm_model = true;
+opt.comm.two_way = true;
 
-%% Prepare and run the simulation for the Polish grid
+%% Prepare the simulation for the Polish grid
 fprintf('----------------------------------------------------------\n');
 disp('loading the data');
 tic
@@ -33,6 +34,9 @@ fprintf('----------------------------------------------------------\n');
 m = size(ps.branch,1);
 pre_contingency_flows = ps.branch(:,C.br.Pf);
 phase_angles_degrees = ps.bus(:,C.bu.Vang);
+% prepare the fake loads
+ps.shunt = add_new_loads(ps);
+ps.bus(:,C.bu.power_from_sh) = assign_loads_to_buses(ps);
 
 %% write out a comm status file.
 pid = feature('getpid');

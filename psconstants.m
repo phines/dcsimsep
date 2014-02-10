@@ -48,14 +48,16 @@ if isempty(C)
     C.bu.mu_Vmin = 17; % sensitivity to changes in limits
 	C.bu.locX   = 18;  % location of the bus in the x dimension
 	C.bu.locY   = 19;  % location of the bus in the y dimension
-    C.bu.comm_status = 20;  % this is a binary value indicating if the comm system is working at this node
+    C.bu.comm_status = 20; % this is a binary value indicating if the comm system is working at this node
+    C.bu.status = 21; % this is a binary value indicating if bus has station service power
+    C.bu.power_from_sh = 22; % indicates which shunt this bus gets its station service power from
     % synonyms
     C.bu.locs   = [C.bu.locX C.bu.locY];
     
     % column names
     C.bu.col_names = {'ID','type','Pd','Qd','Gs','Bs','area','Vmag','Vang','basekV','zone','Vmax','Vmin','lam_P','lam_Q','mu_Vx','mu_Vn','locX','locY'};
 
-	C.bu.cols = 19; % minimum number of columns
+	C.bu.cols = 22; % minimum number of columns
 	C.bus = C.bu; % allows us to use C.bus or C.bu
     % default kv
     C.bu.baseKV_default = 230;

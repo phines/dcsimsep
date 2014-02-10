@@ -60,6 +60,8 @@ for g = grid_list
         if ~isempty(Dsub)
             d_factor(Dsub)=0;
         end
+        % shut the buses down
+        ps.bus(:,C.bu.status) = 0;
         continue;
     end    
     % if there is too much generation, ramp down generation
@@ -106,6 +108,8 @@ for g = grid_list
             ge_status(Gsub) = 0;
             Pg(Gsub) = 0;
             d_factor(Dsub)=0;
+            % shut the buses down
+            ps.bus(:,C.bu.status) = 0;
             continue;
         end
         error('We should not be here');

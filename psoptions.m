@@ -50,6 +50,7 @@ opt.simdc = opt.sim;
 %% Communication system modeling stuff
 opt.comm.python_location = '/usr/bin/python';
 opt.comm.comm_model = [];
+opt.comm.two_way = false;
 if exist('config.json','file')
     config_file = parse_json(fileread('config.json'));
     opt.sim.python_location = config_file{1}.pythonLocation;

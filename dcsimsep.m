@@ -126,7 +126,7 @@ dt = 10.00; % This initial time step sets the quantity of initial gen ramping.
 while t < t_max
     % Step 3. Find sub-grids in the network and check for major separation
     [sep,sub_grids,n_sub,p_out,busessep] = check_separation(ps,opt.sim.stop_threshold,opt.verbose);
-    
+        
     % Step 4. redispatch & run the power flow
     %  if there are new islands, redispatch the generators
     if n_sub>n_sub_old
@@ -143,10 +143,6 @@ while t < t_max
         ps.gen(:,C.ge.status) = ge_status;
         ps.gen(:,C.ge.P) = Pg;
         ramp_rate(~ge_status)=0; % make sure that failed generators don't ramp
-        % debug
-        if Pg(15)<EPS && ge_status(15)
-            keyboard
-        end
     end
     n_sub_old = n_sub;
     % run the power flow and record the flow
@@ -227,6 +223,9 @@ while t < t_max
         relay_outages = cat(1,relay_outages,[t br]);
     end
     
+    % allow for unexpected outages
+    
+    
     % print something
     if opt.verbose && ~isempty(br_out_new)
         fprintf(' Branch %d triped on overcurrent\n',br_out_new);
@@ -261,4 +260,3 @@ if opt.verbose
     fprintf('  %g MW load lost (%.1f%%)\n',MW_lost,MW_lost/Pd0_sum*100);
     fprintf('--------------------------------------------\n');
 end
-

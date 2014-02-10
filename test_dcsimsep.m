@@ -25,6 +25,8 @@ toc
 fprintf('----------------------------------------------------------\n');
 tic
 ps = updateps(ps);
+% add new dummy loads
+ps.shunt = add_new_loads(ps);
 ps = redispatch(ps);
 ps = dcpf(ps);
 toc
