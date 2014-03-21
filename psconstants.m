@@ -55,7 +55,8 @@ if isempty(C)
     C.bu.locs   = [C.bu.locX C.bu.locY];
     
     % column names
-    C.bu.col_names = {'ID','type','Pd','Qd','Gs','Bs','area','Vmag','Vang','basekV','zone','Vmax','Vmin','lam_P','lam_Q','mu_Vx','mu_Vn','locX','locY'};
+    C.bu.col_names = {'ID','type','Pd','Qd','Gs','Bs','area','Vmag','Vang','basekV','zone','Vmax','Vmin',...
+        'lam_P','lam_Q','mu_Vx','mu_Vn','locX','locY','comm_status','bus_status','power_from_sh'};
 
 	C.bu.cols = 22; % minimum number of columns
 	C.bus = C.bu; % allows us to use C.bus or C.bu

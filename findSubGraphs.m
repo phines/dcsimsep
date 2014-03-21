@@ -2,7 +2,7 @@ function [graphNos,nSubGraphs] = findSubGraphs(nodes_A,links)
 % This function identifies connected components in an undirected graph
 %
 % usage: [graphNos,nSubGraphs] = findSubGraphs(A)
-%  where A is an n x n symetrical incidence matrix 
+%  where A is an n x n symetrical adjacency matrix 
 %or
 % usage: [graphNos,nSubGraphs] = findSubGraphs(nodes,links)
 %  where nodes is  an n x 1 list of node numbers and links is
@@ -21,7 +21,7 @@ else
     internal = ismember(links(:,1),nodes) & ismember(links(:,2),nodes);
     % renumber to get sequential numbering
     e2i = sparse(nodes,1,(1:n)',max(nodes),1);
-    % form the incidence matrix
+    % form the adjacency matrix
     F = e2i( links(internal,1) );
     T = e2i( links(internal,2) );
     A = sparse([F;T],[T;F],1,n,n) + speye(n);

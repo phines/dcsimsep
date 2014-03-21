@@ -1,6 +1,8 @@
 function shunt = add_new_loads(ps)
 % adds new loads so that there is one load at each bus
 
+error('Don''t use this file');
+
 n = size(ps.bus,1);
 C = psconstants;
 

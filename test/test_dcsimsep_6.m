@@ -14,8 +14,6 @@ opt.sim.fast_ramp_mins = 1;
 % load the case data
 ps = case6ww_ps;
 ps = updateps(ps);
-% add new loads
-ps.shunt = add_new_loads(ps);
 ps = redispatch(ps);
 ps = dcpf(ps);
 %printps(ps);

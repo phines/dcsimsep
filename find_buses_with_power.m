@@ -9,8 +9,11 @@ n = length(is_powered);
 
 % look at each bus
 for i = 1:n
+    % if we we are doing 2-way coupling, and this bus has power
     if opt.comm.two_way && is_powered(i)
-        sh_index = ps.bus(i,C.bu.power_from_sh);
+        % figure out which bus this bus is powered from
+        sh_index = ps.bus(i,C.bu.power_from_sh)
+        pause
         p_failure = 1-ps.shunt(sh_index,C.sh.factor);
         is_failed = rand>p_failure;
         if is_failed
@@ -20,6 +23,7 @@ for i = 1:n
 end
 
 return
+
 %{ 
 OLD STUFF
 load_shedding_limit = 0.5; % < This is a big assumption!
