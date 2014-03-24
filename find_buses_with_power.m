@@ -12,10 +12,9 @@ for i = 1:n
     % if we we are doing 2-way coupling, and this bus has power
     if opt.comm.two_way && is_powered(i)
         % figure out which bus this bus is powered from
-        sh_index = ps.bus(i,C.bu.power_from_sh)
-        pause
+        sh_index = ps.bus(i,C.bu.power_from_sh);
         p_failure = 1-ps.shunt(sh_index,C.sh.factor);
-        is_failed = rand>p_failure;
+        is_failed = rand<p_failure;
         if is_failed
             is_powered(i) = false;
         end
