@@ -40,7 +40,8 @@ for i = bu_subset'
             % if we found a shunt, then
             % choose a random shunt, apply it to this bus
             if ~isempty(potential_loads)
-                shunt_index(i) = randi([1 length(potential_loads)]);
+                ix = randi([1 length(potential_loads)]);
+                shunt_index(i) = potential_loads(ix);
                 break;
             end
         end
