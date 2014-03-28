@@ -53,8 +53,8 @@ opt.comm.comm_model = [];
 opt.comm.two_way = false;
 if exist('config.json','file')
     config_file = parse_json(fileread('config.json'));
-    opt.sim.python_location = config_file{1}.pythonLocation;
-    opt.sim.comm_model = config_file{1}.commModel;
+    opt.comm.python_location = config_file{1}.pythonLocation;
+    opt.comm.comm_model = config_file{1}.commModel;
 end
 
 %% drawing stuff

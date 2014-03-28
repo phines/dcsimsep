@@ -48,7 +48,7 @@ if opt.sim.use_comm_model
         comm_model = opt.comm.comm_model;
         % if it exists, call the comm model code
         if exist(comm_model,'file')
-            systemcall = sprintf('%s %s %d %d %d',python_location,comm_model,pid,it_no,fraction_removed);
+            systemcall = sprintf('%s %s %d %d %d',python_location,comm_model,pid,it_no,-1);
             system(systemcall);
         end
     end
