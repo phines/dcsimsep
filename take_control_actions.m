@@ -64,6 +64,7 @@ if opt.sim.use_comm_model
         if length(comm_status)~=n
             error('Wrong number of items in comm status file');
         end
+        delete(comm_status_file);
     else
         comm_status = true(n,1);
     end
