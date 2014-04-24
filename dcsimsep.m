@@ -137,7 +137,8 @@ while t < t_max
         % Error check:
         Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
         Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
-        if opt.debug && any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
+%         if opt.debug && any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
+        if any( round(Pg)<round(Pg_min-EPS) | round(Pg)>round(Pg_max+EPS) ), error('Pg is out of bounds'); end
         % Implement the changes to load and generation
         ps.shunt(:,C.sh.factor) = d_factor;
         ps.gen(:,C.ge.status) = ge_status;
@@ -153,7 +154,13 @@ while t < t_max
         Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
         Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
         Pg = ps.gen(:,C.ge.Pg);
-        if any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds');end
+        if any( round(Pg)<round(Pg_min-EPS) | round(Pg)>round(Pg_max+EPS) ), 
+            keyboard
+            error('Pg is out of bounds');
+        end        
+%         if any( Pg<Pg_min | Pg>Pg_max ),         
+%             keyboard, error('Pg is out of bounds');
+%         end
     end
     % Extract and record the flows
     flow  = ps.branch(:,C.br.Pf);
@@ -238,11 +245,12 @@ end
 % do a final redispatch just to make sure
 [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_rate*dt,opt.verbose);
 % Error check
-if opt.debug
+% if opt.debug
     Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
     Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
-    if any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
-end
+%     if any( Pg<Pg_min | Pg>Pg_max ), error('Pg is out of bounds'); end
+    if any( round(Pg)<round(Pg_min-EPS) | round(Pg)>round(Pg_max+EPS) ), error('Pg is out of bounds'); end
+% end
 % Implement
 ps.shunt(:,C.sh.factor) = d_factor;
 ps.gen(:,C.ge.status) = ge_status;

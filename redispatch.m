@@ -33,7 +33,9 @@ Pg0 = ps.gen(:,C.ge.P).*ge_status;
 Pg  = Pg0;
 Pg_max = min(ps.gen(:,C.ge.Pmax),Pg+ramp_limits).*ge_status;
 Pg_min = max(ps.gen(:,C.ge.Pmin),Pg-ramp_limits).*ge_status;
-if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
+% if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
+if any(round(Pg)<round(Pg_min-EPS)) || any(round(Pg)>round(Pg_max+EPS))
+    keyboard
     error('Generation outside of Pmin/Pmax');
 end
 
@@ -60,8 +62,8 @@ for g = grid_list
         if ~isempty(Dsub)
             d_factor(Dsub)=0;
         end
-        % shut the buses down
-        ps.bus(:,C.bu.status) = 0;
+% %         % shut the buses down
+% %         ps.bus(:,C.bu.status) = 0;
         continue;
     end    
     % if there is too much generation, ramp down generation
@@ -155,7 +157,8 @@ end
 % debug check
 Pg_max = min(ps.gen(:,C.ge.Pmax),Pg+ramp_limits).*ge_status;
 Pg_min = max(ps.gen(:,C.ge.Pmin),Pg-ramp_limits).*ge_status;
-if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
+% if any(Pg<Pg_min-EPS) || any(Pg>Pg_max+EPS)
+if any(round(Pg)<round(Pg_min-EPS)) || any(round(Pg)>round(Pg_max+EPS))
     error('Generation outside of Pmin/Pmax');
 end
 

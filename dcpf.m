@@ -156,7 +156,9 @@ ps.B = B;
 
 % check for imbalance
 imbalance = sum(ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status)) - sum(ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor));
-if abs(imbalance)>1e-3
+% if abs(imbalance)>1e-3
+if abs(imbalance)>1e-2
+    keyboard
     error('Imbalance found when there shouldn''t be one');
 end
 

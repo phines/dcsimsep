@@ -103,7 +103,8 @@ if any(abs(measured_flow)>flow_max)
         % Compute the new amount of generation
         Pg_new = ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status) + delta_Pg;
         % Error checking
-        if any( Pg_new<Pg_min | Pg_new>Pg_max )
+%        if any( Pg_new<Pg_min | Pg_new>Pg_max )
+        if any( round(Pg_new)<round(Pg_min-EPS) | round(Pg_new)>round(Pg_max+EPS) )
             error('Pg_new is out of bounds');
         end
         % Compute the new load factor
@@ -126,7 +127,8 @@ if any(abs(measured_flow)>flow_max)
         ps = dcpf(ps,sub_grids,true,opt.verbose);
         % Check to make sure things are within bounds
         Pg = ps.gen(:,C.ge.Pg);
-        if any( Pg>Pg_max | Pg<Pg_min )
+%         if any( Pg>Pg_max | Pg<Pg_min )
+        if any( round(Pg)<round(Pg_min-EPS) | round(Pg)>round(Pg_max+EPS) )
             error('Pg is out of bounds'); 
         end
     end
