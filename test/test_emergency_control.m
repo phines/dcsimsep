@@ -4,7 +4,7 @@ C = psconstants;
 opt = psoptions;
 opt.verbose = 1;
 verbose = opt.verbose;
-opt.optimizer = 'mexosi';
+opt.optimizer = 'cplex';
 EPS = 1e-6;
 
 %% create the case
@@ -22,7 +22,6 @@ Pg_min = zeros(ng,1);
 Pg_max = ps.gen(:,C.ge.Pmax);
 flow_max = ps.branch(:,C.br.rateB);
 comm_status = true(n,1);
-
 
 %% test split the network
 % split the network in two
@@ -163,7 +162,7 @@ while 1
     % collect the state data
     branch_st = ps.branch(:,C.br.status);
     measured_flow = ps.branch(:,C.br.Pf);
-    if all( measured_flow <= (flow_max+EPS) )
+    if all( abs(measured_flow) <= (flow_max+EPS) )
         break;
     end
     % optimize

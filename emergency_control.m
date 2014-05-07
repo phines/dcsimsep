@@ -177,6 +177,7 @@ switch opt.optimizer
     case 'linprog'
         [x_star,~,exitflag,~] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'mexosi'
+        error('mexosi is broken');
         A = [A_pf;A_flow_1;A_flow_2];
         b_max = [b_pf;b_flow_1;b_flow_2];
         b_min = -Inf(size(b_max));
@@ -194,6 +195,7 @@ if exitflag==1
         disp('  Solved the emergency control problem');
     end
 else
+    keyboard
     if opt.verbose
         disp('  Optimization failed');
     end

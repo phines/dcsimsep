@@ -33,11 +33,14 @@ m = size(ps.branch,1);
 pre_contingency_flows = ps.branch(:,C.br.Pf);
 phase_angles_degrees = ps.bus(:,C.bu.Vang);
 
+%% Run an extreme case
+
 %% Run several cases
 opt.verbose = false;
-
 load BOpairs
 n_iters = 10;
+
+disp('Testing DCSIMSEP without control.');
 tic
 for i = 1:n_iters
     % outage
@@ -51,6 +54,7 @@ end
 toc
 
 % try again with control
+disp('Testing DCSIMSEP with control.');
 opt.sim.use_control = true;
 tic
 for i = 1:n_iters
