@@ -85,7 +85,7 @@ if ~simple
             diameter = sqrt(abs(P))*circle_size;
             drawcircle(gx,gy,diameter,'g','g',1);
             if ps.bus(gen_bus_i,C.bu.type)==C.REF || ps.gen(i,C.ge.type)==C.REF
-                text(gx,gy,'R','HorizontalAlignment','center');
+                text(gx,gy,'R','HorizontalAlignment','right');
             end
         elseif P<0
             text(gx,gy,'?','HorizontalAlignment','center');
