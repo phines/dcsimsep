@@ -2,11 +2,12 @@ clear all
 %% Global constants
 C = psconstants;
 opt = psoptions;
-opt.verbose = 1;
+opt.verbose = false;
 verbose = opt.verbose;
-opt.optimizer = 'mexosi';
+opt.optimizer = 'cvx';
 EPS = 1e-6;
 
+%{
 %% create the case
 ps = case6ww_ps;
 ps = updateps(ps);
@@ -41,7 +42,7 @@ while 1
     % collect the state data
     branch_st = ps.branch(:,C.br.status);
     measured_flow = ps.branch(:,C.br.Pf);
-    if all( measured_flow <= (flow_max+EPS) )
+    if all( abs(measured_flow) <= (flow_max+EPS) )
         break;
     end
     figure(1);
@@ -49,7 +50,8 @@ while 1
     title('Before');
     pause
     % optimize
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt)
+    keyboard
+    [delta_Pd,delta_Pg,fval,output] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt);
     % implement the control
     % Implement the load and generator control
     Pg_new = ps.gen(:,C.ge.P) + delta_Pg;
@@ -104,7 +106,7 @@ while 1
     % collect the state data
     branch_st = ps.branch(:,C.br.status);
     measured_flow = ps.branch(:,C.br.Pf);
-    if all( measured_flow <= (flow_max+EPS) )
+    if all( abs(measured_flow) <= (flow_max+EPS) )
         break;
     end
     figure(3);
@@ -112,8 +114,8 @@ while 1
     title('Before');
     pause
     % optimize
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt)
-    % implement the control
+    keyboard
+    [delta_Pd,delta_Pg,fval,output] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt);
     % Implement the load and generator control
     Pg_new = ps.gen(:,C.ge.P) + delta_Pg;
     ps.gen(:,C.ge.P) = max(Pg_min,min(Pg_new,Pg_max)); % implement Pg
@@ -129,6 +131,7 @@ figure(4);
 drawps(ps,opt);
 measured_flow = ps.branch(:,C.br.Pf);
 title('After');
+%}
 
 %% Now try with the Polish case
 disp('Checking the Polish case');
@@ -147,7 +150,7 @@ Pg_min = zeros(ng,1);
 Pg_max = ps.gen(:,C.ge.Pmax);
 ramp_limits = Pg_max;
 % edit the line limits
-ps.branch(:,C.br.rates) = ps.branch(:,C.br.rates)*.5;
+% ps.branch(:,C.br.rates) = ps.branch(:,C.br.rates)*.5;
 flow_max = ps.branch(:,C.br.rateB);
 % remove lines
 % choose a contingency
@@ -163,13 +166,13 @@ while 1
     % collect the state data
     branch_st = ps.branch(:,C.br.status);
     measured_flow = ps.branch(:,C.br.Pf);
-    if all( measured_flow <= (flow_max+EPS) )
+    if all( abs(measured_flow) <= (flow_max+EPS) )
         break;
     end
     % optimize
     comm_status = true(n,1);
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt);
-    % Implement the load and generator control
+    keyboard
+    [delta_Pd,delta_Pg,fval,output] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt);    
     Pg_new = ps.gen(:,C.ge.P) + delta_Pg;
     ps.gen(:,C.ge.P) = max(Pg_min,min(Pg_new,Pg_max)); % implement Pg
     % compute the new load factor
