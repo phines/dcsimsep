@@ -1,4 +1,4 @@
-function [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
+function [delta_Pd,delta_Pg,fval,output] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
 % An emergency control function to adjust load, based on current measured
 %  flows
 % usage: [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
@@ -16,7 +16,7 @@ function [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp
 %% Prep work
 C = psconstants;
 EPS = 1e-6;
-f_over_cost = 1000;
+f_over_cost = 100;
 
 % check the inputs
 if nargin<3, error('need at least 3 inputs'); end
@@ -89,16 +89,20 @@ x_max(ix.x.f_over) = Inf;
 % constrain one reference bus for each island
 % choose a bus that is already closest to zero
 theta = ps.bus(:,C.bu.Vang) * pi / 180;
+ref_bus_num = zeros(n_sub,1);
 for grid_i = 1:n_sub
     bus_subset = find(grid_no == grid_i);
     theta_sub = theta(bus_subset);
     % find the bus in this island with the smallest absolute angle
     [~,ref_tmp] = min(abs(theta_sub));
     ref_ix = bus_subset(ref_tmp);
-    % set this bus to be the local reference
-    x_min(ix.x.d_theta(ref_ix)) = 0;
-    x_max(ix.x.d_theta(ref_ix)) = 0;
+    % Add this bus to the reference list
+    ref_bus_num(grid_i) = ref_ix;
 end
+% set this bus to be the local reference
+x_min(ix.x.d_theta(ref_bus_num)) = 0;
+x_max(ix.x.d_theta(ref_bus_num)) = 0;
+
 cost = zeros(ix.nx,1);
 cost(ix.x.dPd) = -1;
 cost(ix.x.f_over) = f_over_cost;
@@ -111,10 +115,6 @@ A_pf = A_pf + sparse(G,ix.x.dPg,1,n,ix.nx);
 % load injection constraint:
 A_pf = A_pf + sparse(D,ix.x.dPd,-1,n,ix.nx);
 % DC power flow matrix constraint
-% -B = sparse(F,T,-inv_X,n,n) + ...
-%     sparse(T,F,-inv_X,n,n) + ...
-%     sparse(T,T,+inv_X,n,n) + ...
-%     sparse(F,F,+inv_X,n,n);
 A_pf = A_pf + sparse(F,T,+inv_X,n,ix.nx) + ...
               sparse(T,F,+inv_X,n,ix.nx) + ...
               sparse(T,T,-inv_X,n,ix.nx) + ...
@@ -173,9 +173,9 @@ if opt.verbose
 end
 switch opt.optimizer
     case 'cplex'
-        [x_star,~,exitflag,~] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+        [x_star,fval,exitflag,output] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'linprog'
-        [x_star,~,exitflag,~] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+        [x_star,fval,exitflag,output] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'mexosi'
         error('mexosi is broken');
         A = [A_pf;A_flow_1;A_flow_2];
@@ -183,12 +183,45 @@ switch opt.optimizer
         b_min = -Inf(size(b_max));
         [x_star,~,exitflag] = osi(cost,x_min,x_max,A,b_min,b_max);
         %[x_star,~,exitflag,~] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+    case 'cvx'
+        B = sparse(F,T,-inv_X,n,n) + ...
+            sparse(T,F,-inv_X,n,n) + ...
+            sparse(T,T,+inv_X,n,n) + ...
+            sparse(F,F,+inv_X,n,n);
+        A_Pg = zeros(n,ng); IDX = sub2ind(size(A_Pg),G',1:length(G)); A_Pg(IDX) = 1;
+        A_Pd = zeros(n,nd); IDX = sub2ind(size(A_Pd),D',1:length(D)); A_Pd(IDX) = 1;
+        warning('off','MATLAB:nearlySingularMatrix'); % suppress this warning
+        if opt.verbose 
+            cvx_begin
+        else
+            cvx_begin quiet
+        end
+        variables delta_Pg_pu(ng) delta_Pd_pu(nd) f_over(m) delta_theta(n)
+        minimize(-sum(delta_Pd_pu) + f_over_cost*ones(1,m)*f_over)
+        subject to:
+            -flow_max - f_over <= measured_flow_pu + diag(inv_X)*(delta_theta(F)-delta_theta(T)) <= flow_max + f_over;
+            B*delta_theta == A_Pg*delta_Pg_pu - A_Pd*delta_Pd_pu;
+            min(Pg_min - Pg0,0).*is_G_conn <= delta_Pg_pu <= (Pg_max - Pg0).*is_G_conn;
+            min(-Pd0,0).*is_D_conn <= delta_Pd_pu <= 0;
+            f_over >= 0;
+            delta_theta(ref_bus_num) == 0;
+        cvx_end
+        if strcmp(cvx_status,'Solved')
+            exitflag = 1000;
+        else
+            exitflag = 0;
+        end
+        fval = cvx_optval;
+        output = cvx_status;
+        warning('on','MATLAB:nearlySingularMatrix'); % turn the warning back on
 end
 
 %% check and process the solution
 if exitflag==1
     delta_Pd_pu = x_star(ix.x.dPd);
     delta_Pg_pu = x_star(ix.x.dPg);
+end
+if exitflag==1 || exitflag==1000
     delta_Pg = delta_Pg_pu * ps.baseMVA;
     delta_Pd = delta_Pd_pu * ps.baseMVA;
     if opt.verbose

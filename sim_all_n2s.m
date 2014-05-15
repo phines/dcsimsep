@@ -1,16 +1,17 @@
-function sim_all_n2s(set_no,n_subsets,ps,casename)
+function sim_all_n2s(set_no,n_subsets,casename,loadprc)
 % Simulate all possible n-2 sequences (defaults to the Polish case)
 %  this file supports compiled code on the VACC
 
+if ischar(set_no), set_no = str2num(set_no); end
+if ischar(n_subsets), n_subsets = str2num(n_subsets); end
+if ischar(loadprc), loadprc = str2num(loadprc); end
+
 %% check the inputs and load the data
 disp('loading the data');
-if nargin<1,set_no=[];end
-if nargin<2,n_subsets=[];end
-if nargin<3
-    vars = load('case2383_mod_ps','ps'); % the base case data
-    ps=vars.ps;
-    ps = dcpf(ps);
-    casename='polish';
+if strcmp(casename,'polish')
+    ps_casename = sprintf('ps_polish_%d',loadprc);
+    vars = load('ps_polish_all.mat',ps_casename); % the base case data
+    ps = vars.(ps_casename);
 end
 
 m = size(ps.branch,1);
@@ -51,13 +52,15 @@ opt.sim.stop_threshold = 0.00; % the fraction of nodes, at which to declare a ma
 % open a file for the aggregate results
 k = 2;
 mkdir(sprintf('../%s_results/k2',casename));
-fname = sprintf('../%s_results/k%d/bo_sizes_%d.csv',casename,k,set_no);
+fname = sprintf('../%s_results/k%d/bo_sizes_loadprc_%d_%d.csv', ...
+    casename,k,loadprc,set_no);
 fk = fopen(fname,'w');
 if fk<=0, error('could not open file'); end
 fprintf(fk,'outages, BO size (MW), BO size (branches)\n');
 
 % open the outage sequence data file
-fname = sprintf('../%s_results/k%d/all_k2_%d.csv',casename,k,set_no);
+fname = sprintf('../%s_results/k%d/all_k2_loadprc_%d_%d.csv',...
+    casename,k,loadprc,set_no);
 f = fopen(fname,'w');
 if f<=0, error('could not open file'); end
 
