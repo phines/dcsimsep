@@ -51,6 +51,7 @@ if isempty(C)
     C.bu.comm_status = 20; % this is a binary value indicating if the comm system is working at this node
     C.bu.status = 21; % this is a binary value indicating if bus has station service power
     C.bu.power_from_sh = 22; % indicates which shunt this bus gets its station service power from
+    C.bu.grid_comm = 23; % Binary indcator that tells us whether there exists a bi-directional grid-comm link
     % synonyms
     C.bu.locs   = [C.bu.locX C.bu.locY];
     

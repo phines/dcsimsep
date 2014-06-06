@@ -32,17 +32,19 @@ if opt.sim.use_comm_model
     end
 
     % Write out the status of each node in the network
+    station_service_status = find_buses_with_power(ps,opt);
+    ps.bus(:,C.bu.status) = station_service_status;
     %  output file name is grid_status_{pid}.csv
-    node_has_power = find_buses_with_power(ps,opt);
-    ps.bus(:,C.bu.status) = node_has_power;
+    % The comm system is only affected if there is a bi-directional link
+    grid_to_comm_status = station_service_status | (~ps.bus(:,C.bu.grid_comm));
     % Write a header to the file
     fileID = fopen(grid_status_file,'w');
     fprintf(fileID,'bus,status\n');
     fclose(fileID);
     % Write the data
-    dlmwrite(grid_status_file, [ps.bus(:,1) node_has_power],'-append','delimiter',',');
+    dlmwrite(grid_status_file, [ps.bus(:,1) grid_to_comm_status],'-append','delimiter',',');
     % Call python comms code
-    if ~all(node_has_power)
+    if ~all(grid_to_comm_status)
         % Figure out where the python code is
         python_location = opt.comm.python_location;
         comm_model = opt.comm.comm_model;
@@ -52,7 +54,6 @@ if opt.sim.use_comm_model
             system(systemcall);
         end
     end
-    
     % check the status of the comm network
     % read the file /tmp/comm_status_{pid}.csv
     % bus,status
@@ -60,7 +61,7 @@ if opt.sim.use_comm_model
     % 2,0 etc...
     if exist(comm_status_file,'file')
         data = csvread(comm_status_file,1);
-        comm_status = (data(:,2)==1);
+        comm_status = (data(:,2)==1) | ps.bus(:,C.bu.grid_comm);
         if length(comm_status)~=n
             error('Wrong number of items in comm status file');
         end
