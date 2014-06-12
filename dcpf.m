@@ -68,6 +68,11 @@ for g = 1:n_sub
     else
         subset = true(n,1);
     end
+    % check the status of these buses
+    if all(ps.bus(subset,C.bu.status)==0)
+        % this subgrid is already in blackout stage. No need to work on this one.
+        continue;
+    end
     if ~any(subset), error('no buses in this subset???'); end
     % find a reference bus
     if ~subset(ref)
@@ -109,6 +114,7 @@ for g = 1:n_sub
             ps = [];
             return
         end
+        ps.bus(subset,C.bu.status) = 0;
         continue
     end
     % remove the slack bus from the subset in order to find angles

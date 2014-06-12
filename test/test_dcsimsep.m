@@ -34,6 +34,12 @@ pre_contingency_flows = ps.branch(:,C.br.Pf);
 phase_angles_degrees = ps.bus(:,C.bu.Vang);
 Pd_total = sum(ps.shunt(:,C.sh.P));
 
+%% Run one extreme case
+load crashedINsimulateDC br_outages;
+opt.verbose=true;
+[is_bo,~,MW_lost] = dcsimsep(ps,br_outages,[],opt);
+return
+
 %% Run some extreme cases
 opt.verbose=false;
 n_iters = 100;
@@ -43,7 +49,7 @@ for i = 1:n_iters
     [is_bo,~,MW_lost] = dcsimsep(ps,br_outages,[],opt);
     fprintf(' Result: %.2f MW (%.2f%%) of load shedding\n',MW_lost,MW_lost/Pd_total*100);
 end
-return
+
 %% Run several cases
 opt.verbose = false;
 load BOpairs
