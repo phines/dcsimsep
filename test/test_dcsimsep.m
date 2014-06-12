@@ -16,7 +16,7 @@ opt.sim.fast_ramp_mins = 1;
 fprintf('----------------------------------------------------------\n');
 disp('loading the data');
 tic
-if exist('case2383_mod_ps.mat')
+if exist('case2383_mod_ps.mat','file')
     load case2383_mod_ps;
 else
     ps = case2383_mod_ps;
@@ -32,9 +32,18 @@ fprintf('----------------------------------------------------------\n');
 m = size(ps.branch,1);
 pre_contingency_flows = ps.branch(:,C.br.Pf);
 phase_angles_degrees = ps.bus(:,C.bu.Vang);
+Pd_total = sum(ps.shunt(:,C.sh.P));
 
-%% Run an extreme case
-
+%% Run some extreme cases
+opt.verbose=false;
+n_iters = 100;
+for i = 1:n_iters
+    br_outages = choose_k(1:m,80);
+    fprintf('Running extreme case %d of %d. ',i,n_iters);
+    [is_bo,~,MW_lost] = dcsimsep(ps,br_outages,[],opt);
+    fprintf(' Result: %.2f MW (%.2f%%) of load shedding\n',MW_lost,MW_lost/Pd_total*100);
+end
+return
 %% Run several cases
 opt.verbose = false;
 load BOpairs

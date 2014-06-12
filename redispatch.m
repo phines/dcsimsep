@@ -14,6 +14,9 @@ function [out1,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_limits,verbose
 C = psconstants;
 EPS = 1e-6;
 n = size(ps.bus,1);
+if ~isfield(ps,'bus_i');
+    ps = updateps(ps);
+end
 
 % check the inputs
 if nargin<2||isempty(sub_grids), sub_grids=ones(n,1); end
@@ -40,6 +43,7 @@ if any(round(Pg)<round(Pg_min-EPS)) || any(round(Pg)>round(Pg_max+EPS))
 end
 
 grid_list = unique(sub_grids)';
+n_sub = length(grid_list);
 for g = grid_list
     bus_set = find(g==sub_grids);
     Gsub = ismember(G,bus_set) & ge_status;
@@ -49,6 +53,13 @@ for g = grid_list
     % if there is no imbalance, nothing to do
     if abs(Pg_sub-Pd_sub)<EPS
         continue;
+    end
+    if verbose
+        if Pg_sub>Pd_sub
+            fprintf('Attempting to correct %.4f MW gen surplus in subgrid %d of %d\n',Pg_sub-Pd_sub,g,n_sub);
+        else
+            fprintf('Attempting to correct %.4f MW gen deficit in subgrid %d of %d\n',Pd_sub-Pg_sub,g,n_sub);
+        end
     end
     % if there are no generators in this island
     if ~any(Gsub)
@@ -80,7 +91,7 @@ for g = grid_list
             error('Something is fishy');
         end
         if verbose
-            fprintf(' Ramping (down) generators on bus: ');
+            fprintf(' Ramping (down) generators on bus(es): ');
             fprintf('#%d ',unique(ps.gen(ramp_set,C.ge.bus)));
             fprintf('\n');
         end

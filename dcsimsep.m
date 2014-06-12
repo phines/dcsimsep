@@ -61,7 +61,9 @@ if opt.verbose
     fprintf('------- t = 0.00 ----------\n');
 end
 % Step 1. redispatch and run the DCPF
-ps = updateps(ps);
+if ~isfield(ps,'bus_i')
+    ps = updateps(ps);
+end
 br_st = ps.branch(:,C.br.status)~=0;
 % check to make sure that the base case is load balanced
 if opt.debug && abs(Pd0_sum - Pg0_sum)>EPS
