@@ -47,20 +47,11 @@ opt.sim.dt_max_default = 60; % maximum amount of time between dcsimsep iteration
 % legacy
 opt.simdc = opt.sim;
 
-%% Communication system modeling stuff
-opt.comm.python_location = '/usr/bin/python';
-opt.comm.comm_model = [];
-opt.comm.two_way = false;
-if exist('config.json','file')
-    config_file = parse_json(fileread('config.json'));
-    opt.comm.python_location = config_file{1}.pythonLocation;
-    opt.comm.comm_model = config_file{1}.commModel;
-end
 
 %% drawing stuff
 opt.draw.width = 0.1;
 opt.draw.bus_nos = true;
 opt.draw.simple = false;
+opt.draw.fontsize = 14;
 
-%% Check for a separate configuration (json) file
-%error('Do this');
+

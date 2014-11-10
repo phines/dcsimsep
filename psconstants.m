@@ -85,7 +85,7 @@ if isempty(C)
 	C.br.Imag_f = 18; % rms current (p.u.) on the from end of the branch
 	C.br.Imag_t = 19; % rms current (p.u.) on the to end of the branch
 	C.br.switchable = 20; % used to indicate that the branch is switchable
-    C.br.fail_rate = 21;  % failure rate of the branch (lambda)
+    C.br.fail_rate = 21;  % failure rate of the branch (lambda - outages per year)
     C.br.type   = 22; % branch type;
     C.br.contg_st   = 23; % 1 if the branch outage is of interest in contingency analysis, and 0 otherwise
     C.br.col_names = {'from','to','R','X','B','rateA','rateB','rateC','tap','shift','status'};

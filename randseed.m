@@ -17,4 +17,4 @@ if nargin==0
 end
 
 s = RandStream.create('mt19937ar','seed',seed);
-RandStream.setDefaultStream(s);
+RandStream.setGlobalStream(s);

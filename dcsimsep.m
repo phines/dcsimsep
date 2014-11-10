@@ -1,5 +1,5 @@
-function [is_blackout,relay_outages,MW_lost,p_out,busessep,flows] = dcsimsep(ps,br_outages,bus_outages,opt)  
-% usage: [is_blackout,relay_outages,MW_lost,p_out,busessep,flows] = dcsimsep(ps,br_outages,bus_outages,opt)  
+function [is_blackout,relay_outages,MW_lost,p_out,busessep,movie_data] = dcsimsep(ps,br_outages,bus_outages,opt)  
+% usage: [is_blackout,relay_outages,MW_lost,p_out,busessep,movie_data] = dcsimsep(ps,br_outages,bus_outages,opt)  
 % is_blackout indicates whether a large separation occurs
 % branches_lost gives the set of dependant outages that occur due to relay actions
 %  this is a ? by 2 matrix, with t in the first column, br no. in the second
@@ -23,7 +23,10 @@ is_blackout = 0;
 p_out=0;  
 busessep=[];  
 
+% Initialize
+t = 0;
 Pd0 = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
+%Pd = Pd0;
 Pd0_sum = sum(Pd0);
 relay_outages = zeros(0,2);
 ps.relay = relay_settings(ps,false,true);
@@ -81,9 +84,12 @@ if opt.debug && abs(mis)>EPS, error('Base case has mismatch'); end
 % Calculate the power flow
 ps = dcpf(ps,[],false,opt.verbose); % this one should not need to do any redispatch, just line flow calcs
 % Get the power flow
-flow = ps.branch(:,C.br.Pf);
-% Record it if needed
-if nargout>5, flows = flow; end
+%flow = ps.branch(:,C.br.Pf);
+% Record the movie data if requested
+
+if nargout>5
+    movie_data = record_movie_data([],t,ps,sub_grids);
+end
 % Error check
 Pg = ps.gen(:,C.ge.Pg);
 if opt.debug && any( Pg<Pg_min | Pg>Pg_max )
@@ -120,6 +126,11 @@ if ~isempty(bus_outages)
             fprintf(' Removed bus %d\n',bus_no);
         end
     end
+end
+
+% Record the movie data if requested
+if nargout>5
+    movie_data = record_movie_data(movie_data,t,ps,sub_grids);
 end
 
 % Begin the main while loop for DCSIMSEP
@@ -165,9 +176,10 @@ while t < t_max
 %         end
     end
     % Extract and record the flows
-    flow  = ps.branch(:,C.br.Pf);
+    %flow  = ps.branch(:,C.br.Pf);
+    %br_st = ps.branch(:,C.br.status);
     if nargout>5
-        flows = [flows flow]; %#ok<AGROW>
+        movie_data = record_movie_data(movie_data,t,ps,sub_grids);
     end
 
     % Step 4a. Take control actions if needed.
@@ -232,8 +244,10 @@ while t < t_max
         relay_outages = cat(1,relay_outages,[t br]);
     end
     
-    % allow for unexpected outages
-    
+    % Record movie data
+    if nargout>5
+        movie_data = record_movie_data(movie_data,t,ps,sub_grids);
+    end
     
     % print something
     if opt.verbose && ~isempty(br_out_new)
@@ -260,6 +274,7 @@ ps.gen(:,C.ge.P) = Pg;
 % Compute the amount of load lost
 Pd = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
 MW_lost = sum(Pd0) - sum(Pd);
+
 % Print something
 if opt.verbose
     n_overloads = sum(ps.branch(:,C.br.Pf)>ps.branch(:,C.br.rateB));
@@ -269,4 +284,42 @@ if opt.verbose
     fprintf('  %d endogenous relay outages\n',size(relay_outages,1));
     fprintf('  %g MW load lost (%.1f%%)\n',MW_lost,MW_lost/Pd0_sum*100);
     fprintf('--------------------------------------------\n');
+end
+
+% Record final movie data
+if nargout>5
+    movie_data = record_movie_data(movie_data,t,ps,sub_grids);
+end
+
+% Extra functions
+function movie_data = record_movie_data(movie_data,t,ps,sub_grids)
+% used to record data needed for movie making
+C = psconstants;
+
+% get data
+Pg = ps.gen(:,C.ge.Pg).*ps.gen(:,C.ge.status);
+Pd = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
+br_st = ps.branch(:,C.br.status)~=0;
+flow = ps.branch(:,C.br.Pf);
+
+% Record data
+if isempty(movie_data)
+    movie_data.t = t;
+    movie_data.flows = flow;
+    movie_data.br_status = br_st;
+    movie_data.sub_grids = sub_grids;
+    movie_data.Pg = Pg;
+    movie_data.Pd = Pd;
+    movie_data.Pd0 = Pd;
+    movie_data.Pg0 = Pg;
+    movie_data.MW_lost = 0;
+else
+    movie_data.t = [movie_data.t t];
+    movie_data.flows = [movie_data.flows flow];
+    movie_data.br_status = [movie_data.br_status br_st];
+    movie_data.sub_grids = [movie_data.sub_grids sub_grids];
+    movie_data.Pg = [movie_data.Pg Pg];
+    movie_data.Pd = [movie_data.Pd Pd];
+    MW_lost = sum(movie_data.Pd0) - sum(Pd);
+    movie_data.MW_lost = [movie_data.MW_lost MW_lost];
 end

@@ -3,6 +3,11 @@ function [x,y] = drawps(ps,opt)
 % usage: [x,y] = drawps(ps,options)
 % options are defined in psoptions
 
+cmap = colormap('Hot');
+n_color = size(cmap,1);
+cmap = cmap((n_color:-1:1),:);
+colormap(cmap);
+
 %% process inputs
 if nargin<2,
     opt=psoptions;
@@ -10,6 +15,7 @@ end
 width_base=opt.draw.width;
 show_bus_nos=opt.draw.bus_nos;
 simple=opt.draw.simple;
+fs = opt.draw.fontsize;
 
 %% prep work and constants
 GREY = [1 1 1]*0.3;
@@ -22,7 +28,7 @@ x = normalize(locs(:,1));
 y = normalize(locs(:,2));
 width_min     = width_base/100;
 circle_size   = width_base*0.7;
-triangle_size = width_base*0.03;
+triangle_size = width_base*0.05;
 
 if all(all(locs==0))
     error('no bus location data provided');
@@ -41,11 +47,20 @@ for i = 1:size(ps.branch,1)
     f = ps.bus_i(ps.branch(i,C.br.from));
     t = ps.bus_i(ps.branch(i,C.br.to));
     status = ps.branch(i,C.br.status)==1;
-    flow = max(ps.branch(i,C.br.Imag_f:C.br.Imag_t));
+    flow = max(ps.branch(i,C.br.Imag_f:C.br.Imag_t)) * status;
     flow_max = ps.branch(i,C.br.rateA:C.br.rateC)/ps.baseMVA;
+    flow_ratio = abs(flow)/flow_max(1);
     X = [x(f) x(t)];
     Y = [y(f) y(t)];
     width = max(flow*width_base,width_min);
+    color_ix = min( ceil(flow_ratio/2*n_color), n_color );
+    color = cmap(color_ix,:);
+    if flow>flow_max
+        drawline(X,Y,color,width,'k');
+    else
+        drawline(X,Y,color,width);
+    end
+    %{
     if simple
         plot(X,Y,'k-');
     elseif ~status || flow==0
@@ -59,6 +74,7 @@ for i = 1:size(ps.branch,1)
     else
         drawline(X,Y,'r',width);
     end
+    %}
     % note the bus size
     bus_sizes(f) = max(bus_sizes(f),width);
     bus_sizes(t) = max(bus_sizes(t),width);
@@ -75,6 +91,7 @@ end
 drawnow
 
 %% draw the generators
+green = [0 256 0]/256;
 if ~simple
     for i = 1:size(ps.gen,1)
         P = ps.gen(i,C.ge.P)/ps.baseMVA;
@@ -83,10 +100,10 @@ if ~simple
             gx = x(gen_bus_i);
             gy = y(gen_bus_i);
             diameter = sqrt(abs(P))*circle_size;
-            drawcircle(gx,gy,diameter,'g','g',1);
-            if ps.bus(gen_bus_i,C.bu.type)==C.REF || ps.gen(i,C.ge.type)==C.REF
-                text(gx,gy,'R','HorizontalAlignment','right');
-            end
+            drawcircle(gx,gy,diameter,green,green,1);
+            %if ps.bus(gen_bus_i,C.bu.type)==C.REF || ps.gen(i,C.ge.type)==C.REF
+            %    text(gx,gy,'R','HorizontalAlignment','center');
+            %end
         elseif P<0
             text(gx,gy,'?','HorizontalAlignment','center');
         end
@@ -95,13 +112,14 @@ if ~simple
 end
 
 %% draw the loads
+blue = [0 0 256]/256;
 if ~simple
     for i = 1:size(ps.shunt,1)
         P = ps.shunt(i,C.sh.P)/ps.baseMVA*ps.shunt(i,C.sh.factor);
         sh_bus_i = ps.bus_i(ps.shunt(i,1));
         sx = x(sh_bus_i);
         sy = y(sh_bus_i);
-        drawtriangle(sx,sy,'r',abs(P)*triangle_size,1);
+        drawtriangle(sx,sy,blue,abs(P)*triangle_size,1);
     end
     drawnow
 end
@@ -109,9 +127,14 @@ end
 %% show bus nos
 if show_bus_nos
     for i=1:n
-        text(x(i),y(i),num2str(ps.bus(i,1)),'HorizontalAlignment','center');
+        text(x(i),y(i),num2str(ps.bus(i,1)),'HorizontalAlignment','center','FontSize',fs);
     end
 end
+
+%% Keep the x and y proportional
+axis equal;
+caxis([0 200]);
+colorbar
 
 return
 
@@ -122,7 +145,7 @@ xp = x - min(x);
 xp = xp/max(xp);
 
 % draw a line with a given thickness
-function drawline(X,Y,color,width)
+function drawline(X,Y,color,width,edgecolor)
 
 dx = X(2) - X(1);
 dy = Y(2) - Y(1);
@@ -134,7 +157,10 @@ p = [[X(1) Y(1)] + ortho*w;
      [X(2) Y(2)] - ortho*w;
      [X(2) Y(2)] + ortho*w;];
 
-patch(p(:,1),p(:,2),color,'EdgeColor',color);
+if nargin<5
+    edgecolor = color;
+end
+patch(p(:,1),p(:,2),color,'EdgeColor',edgecolor);
 
 % draw a circle
 function drawcircle(x,y,diameter,face_color,border_color,alpha)

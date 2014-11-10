@@ -4,11 +4,7 @@ C = psconstants; % tells me where to find my data
 
 %% simulate the cascade
 % get constants that help us to find the data
-% set some options
-opt = psoptions;
-opt.verbose = true; % set this to false if you don't want stuff on the command line
-% Stopping criterion: (set to zero to simulate a complete cascade)
-opt.sim.stop_threshold = 0.00; % the fraction of nodes, at which to declare a major separation
+C = psconstants;
 % Prepare and run the simulation for the Polish grid
 disp('loading the data');
 %ps = case300_001_ps;
@@ -19,13 +15,22 @@ ps = updateps(ps);
 m = size(ps.branch,1);
 
 % choose some branch outages
-outage_no = 7;
+outage_no = 1;
 exo_branches = BOpairs(outage_no,:);
 exo_buses = [];
 
+% Set some options
+opt = psoptions;
+opt.verbose = true; % set this to false if you don't want stuff on the command line
+% Stopping criterion: (set to zero to simulate a complete cascade)
+opt.sim.stop_threshold = 0.00; % the fraction of nodes, at which to declare a major separation
+opt.sim.fast_ramp_mins = 1;
+
 % run the simulator
-disp('running the simulation');
-[is_blackout,endo_branches,MW_lost,p_out,busessep,flows] = dcsimsep(ps,exo_branches,exo_buses,opt);
+disp('Running the simulation and creating the pictures');
+dcsimsep2pictures(ps,exo_branches,exo_buses,opt);
+
+return
 
 %% now draw the cascade
 % prep the figure
