@@ -1,4 +1,4 @@
-function [out1,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_limits,verbose)
+function [out1,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_limits,verbose,opt)
 % very simple redispatch function
 % usage: [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_limits,verbose)
 %  or more simply:
@@ -23,6 +23,7 @@ if nargin<2||isempty(sub_grids), sub_grids=ones(n,1); end
 ge_status = ps.gen(:,C.ge.status)==1;
 if nargin<3||isempty(ramp_limits), ramp_limits=ps.gen(:,C.ge.Pmax).*ge_status; end
 if nargin<4, verbose=true; end
+if nargin<5, opt=psoptions; end
 
 % collect the load data
 D = ps.bus_i(ps.shunt(:,1));
@@ -76,7 +77,25 @@ for g = grid_list
         % shut the buses down
         ps.bus(bus_set,C.bu.status) = 0;
         continue;
-    end    
+    end
+    % if we want to do this the simple way
+    if opt.sim.simple_redispatch
+        if Pg_sub>Pd_sub
+            gen_factor = Pd_sub/Pg_sub;
+            Pg(Gsub) = Pg(Gsub) * gen_factor;
+        else
+            load_factor = Pg_sub/Pd_sub;
+            d_factor(Dsub) = d_factor(Dsub) * load_factor;
+        end
+        % debug
+        Pg_sub = sum(Pg(Gsub));
+        Pd_sub = sum(Pd(Dsub).*d_factor(Dsub));
+        if abs(Pg_sub - Pd_sub)>EPS
+            error('This shouldn''t happen');
+        end
+        continue
+    end
+
     % if there is too much generation, ramp down generation
     while (Pg_sub-Pd_sub)>+EPS
         % figure out which generators can ramp down

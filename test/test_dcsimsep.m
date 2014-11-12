@@ -1,5 +1,6 @@
 clear all;
 clc
+%addpath('../dcsimsep/');
 
 %% get constants that help us to find the data
 C = psconstants; % tells me where to find my data
@@ -10,6 +11,8 @@ opt.verbose = false; % set this to false if you don't want stuff on the command 
 % Stopping criterion: (set to zero to simulate a complete cascade)
 opt.sim.stop_threshold = 0.00; % the fraction of nodes, at which to declare a major separation
 opt.sim.fast_ramp_mins = 1;
+opt.sim.simple_redispatch = true;
+
 
 %% Prepare and run the simulation for the Polish grid
 %ps = case300_001_ps;
@@ -33,10 +36,14 @@ m = size(ps.branch,1);
 pre_contingency_flows = ps.branch(:,C.br.Pf);
 phase_angles_degrees = ps.bus(:,C.bu.Vang);
 Pd_total = sum(ps.shunt(:,C.sh.P));
+% Set lower gen limits to zero
+ps.gen(:,C.ge.Pmin) = 0;
 
 %% Run one extreme case
-load crashedINsimulateDC br_outages;
+%load crashedINsimulateDC br_outages;
+load ../BOpairs;
 opt.verbose=true;
+br_outages = BOpairs(1,:);
 [is_bo,~,MW_lost] = dcsimsep(ps,br_outages,[],opt);
 return
 
