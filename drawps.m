@@ -53,7 +53,7 @@ for i = 1:size(ps.branch,1)
     X = [x(f) x(t)];
     Y = [y(f) y(t)];
     width = max(flow*width_base,width_min);
-    color_ix = min( ceil(flow_ratio/2*n_color), n_color );
+    color_ix = max(1,min( ceil(flow_ratio/2*n_color), n_color ));
     color = cmap(color_ix,:);
     if flow>flow_max
         drawline(X,Y,color,width,'k');
