@@ -66,7 +66,7 @@ for g = grid_list
         d_factor(Dsub) = 0;
         if opt.verbose
             shed_load = Pd_sub;
-            fprintf(' Redispatch: Shed %4.2f MW of load in subgrid %d of %d.\n',shed_load,g,n_sub);
+            fprintf(' Redispatch: No generators in subgrid %d of %d. Shed %4.2f MW of load.\n',g,n_sub,shed_load);
         end
         continue;
     end
@@ -74,7 +74,7 @@ for g = grid_list
     if ~any(Dsub) || Pd_sub<0
         ge_status(Gsub) = 0;
         if opt.verbose
-            fprintf(' Redispatch: Tripping generator on bus(es):\n')
+            fprintf(' Redispatch: No loads in subgrid %d of %d. Tripping generator on bus(es):\n',g,n_sub)
             all_bus = full(G(Gsub));
             all_Pg_sub = full(Pg(Gsub));
             for i = 1:length(all_bus)

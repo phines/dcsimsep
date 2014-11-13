@@ -228,10 +228,7 @@ if exitflag==1 || exitflag==1000
         disp('  Solved the emergency control problem');
     end
 else
-    keyboard
-    if opt.verbose
-        disp('  Optimization failed');
-    end
+    error('  Optimization failed');
     delta_Pg_pu = zeros(ng,1);
     delta_Pd_pu = zeros(nd,1);
     delta_Pg = zeros(ng,1);

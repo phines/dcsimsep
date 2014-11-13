@@ -146,7 +146,7 @@ while t < t_max
         ramp_dt = max(dt,opt.sim.fast_ramp_mins*60); % the amount of 
            % generator ramping time to allow. 
         max_ramp = ramp_rate*ramp_dt; 
-        [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,max_ramp,opt.verbose,opt);
+        [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,max_ramp,opt);
         % Error check:
         Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
         Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
@@ -259,7 +259,7 @@ while t < t_max
 end
 
 % do a final redispatch just to make sure
-[Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_rate*dt,opt.verbose,opt);
+[Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_rate*dt,opt);
 % Error check
 % if opt.debug
     Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
