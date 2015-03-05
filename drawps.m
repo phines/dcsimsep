@@ -3,7 +3,8 @@ function [x,y] = drawps(ps,opt)
 % usage: [x,y] = drawps(ps,options)
 % options are defined in psoptions
 
-cmap = colormap('Hot');
+cmap = colormap('Copper');
+cmap(64,:) = [1 1 1];
 n_color = size(cmap,1);
 cmap = cmap((n_color:-1:1),:);
 colormap(cmap);
@@ -112,7 +113,7 @@ if ~simple
 end
 
 %% draw the loads
-blue = [0 0 256]/256;
+blue = [64 64 256]/256;
 if ~simple
     for i = 1:size(ps.shunt,1)
         P = ps.shunt(i,C.sh.P)/ps.baseMVA*ps.shunt(i,C.sh.factor);

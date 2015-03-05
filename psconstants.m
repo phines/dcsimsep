@@ -177,9 +177,11 @@ if isempty(C)
 	% use status with binary control or factor with continuous control
 	C.sh.type   = 7; % indicates how this shunt is (or is not) controlled
 	C.sh.value  = 8; % the relative value of this load ($/MVA), where MVA is abs(P+jQ)
-	C.sh.cols   = 9; % minimum number of columns	
+	C.sh.frac_E = 9; % fraction of the shunt that should use an expontential load model P*Vmag^gamma;
 	C.shunt     = C.sh; % synonym
     C.sh.col_names = {'bus','P','Q','frac_S','frac_Z','status','type','value'};
+    C.sh.cols   = 9; % minimum number of columns	
+
     
     %% event-related definitions
 
