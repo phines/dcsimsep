@@ -82,7 +82,7 @@ ramp_rate( ~ge_status ) = 0; % plants that are shut down cannot ramp
 mis = total_P_mismatch(ps);
 if opt.debug && abs(mis)>EPS, error('Base case has mismatch'); end
 % Calculate the power flow
-ps = dcpf(ps,[],false,opt.verbose); % this one should not need to do any redispatch, just line flow calcs
+ps = dcpf(ps,[]); % this one should not need to do any redispatch, just line flow calcs
 % Get the power flow
 %flow = ps.branch(:,C.br.Pf);
 % Record the movie data if requested
@@ -160,7 +160,7 @@ while t < t_max
     end
     n_sub_old = n_sub;
     % run the power flow and record the flow
-    ps = dcpf(ps,sub_grids,true,opt.verbose);
+    ps = dcpf(ps,sub_grids);
     if opt.debug
         % Check that
         ge_status = ps.gen(:,C.ge.status);
