@@ -3,7 +3,7 @@ function [relay,br_out_new,dt,n_over] = update_relays(ps,verbose,dt_max)
 
 % default inputs
 if nargin<2, verbose=1; end;
-if nargin<3, dt_max=1e100; end;
+if nargin<3, dt_max=Inf; end;
 
 % initialize outputs
 C = psconstants;
@@ -64,7 +64,7 @@ dt = min(dt_max,dt_trip);
 relay(:,C.re.state_a) = max(relay(:,C.re.state_a) + excess*dt + SMALL_EPS,0);
 
 % check to see if any relays trip
-if dt<dt_max
+if dt_trip<=dt_max
     relay_trips = find(relay(:,C.re.state_a)>=relay(:,C.re.threshold));
     % error check:
     diff_in_trip_t = trip_t(relay_trips)-trip_t(relay_trips(1));
