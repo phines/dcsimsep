@@ -176,6 +176,7 @@ for g = grid_list
         if factor<0
             error('Something is fishy');
         end
+        Pg_old = Pg; % record old Pg for printing
         Pg(ramp_set) = min( Pg(ramp_set) + rr(ramp_set)*factor, Pg_max(ramp_set) );
         Pg_sub = sum(Pg(Gsub));
         if opt.verbose
@@ -184,7 +185,7 @@ for g = grid_list
             for i = 1:length(all_ramp_bus)
                 idx_ramp_set = ps.gen(ramp_set,C.ge.bus) == all_ramp_bus(i);
                 idx_Pg = ramp_set(idx_ramp_set);
-                this_ramp = sum(Pg(idx_Pg) - ps.gen(idx_Pg,C.ge.P));
+                this_ramp = sum(Pg(idx_Pg) - Pg_old(idx_Pg));
                 fprintf('   #%d for %.2f MW\n',all_ramp_bus(i),this_ramp);
             end
         end

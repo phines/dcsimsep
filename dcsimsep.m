@@ -31,9 +31,9 @@ Pd0_sum = sum(Pd0);
 relay_outages = zeros(0,2);
 ps.relay = relay_settings(ps,false,true);
 % some constants
-dt_max = opt.sim.dt_max_default;
 t_max = 60*30; % time limit for the simulation
 EPS = 1e-4;
+dt_max = 60; % for relays. This needs to change in future.
 
 % Grab some useful data
 C = psconstants;
@@ -229,7 +229,6 @@ while t < t_max
             break
         end
     end
-    
     % advance/print the time
     t = t + dt;
     if opt.verbose
