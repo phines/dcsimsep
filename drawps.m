@@ -3,7 +3,8 @@ function [x,y] = drawps(ps,opt)
 % usage: [x,y] = drawps(ps,options)
 % options are defined in psoptions
 
-cmap = colormap('Hot');
+cmap = colormap('jet');
+cmap = cmap(size(cmap,1):-1:1,:);
 n_color = size(cmap,1);
 cmap = cmap((n_color:-1:1),:);
 colormap(cmap);
@@ -19,7 +20,7 @@ fs = opt.draw.fontsize;
 
 %% prep work and constants
 GREY = [1 1 1]*0.3;
-ORANGE = [255 127 0]/255;
+%ORANGE = [255 127 0]/255;
 EPS = 1e-6;
 C = psconstants;
 ps = updateps(ps);
@@ -27,8 +28,9 @@ locs = ps.bus(:,C.bu.locX:C.bu.locY);
 x = normalize(locs(:,1));
 y = normalize(locs(:,2));
 width_min     = width_base/100;
-circle_size   = width_base*0.7;
+circle_size   = width_base*0.1;
 triangle_size = width_base*0.05;
+flow_max_factor = 1.8;
 
 if all(all(locs==0))
     error('no bus location data provided');
@@ -52,11 +54,13 @@ for i = 1:size(ps.branch,1)
     flow_ratio = abs(flow)/flow_max(1);
     X = [x(f) x(t)];
     Y = [y(f) y(t)];
-    width = max(flow*width_base,width_min);
-    color_ix = min( ceil(flow_ratio/2*n_color), n_color );
+    width = max(sqrt(flow)*width_base,width_min);
+    color_ix = max(min( ceil(flow_ratio*n_color/flow_max_factor), n_color ),1);
     color = cmap(color_ix,:);
     if flow>flow_max
         drawline(X,Y,color,width,'k');
+    elseif flow<EPS
+        %drawline(X,Y,GREY,width_min);
     else
         drawline(X,Y,color,width);
     end
@@ -91,7 +95,7 @@ end
 drawnow
 
 %% draw the generators
-green = [0 256 0]/256;
+green = [133 251 163]/256;
 if ~simple
     for i = 1:size(ps.gen,1)
         P = ps.gen(i,C.ge.P)/ps.baseMVA;
@@ -112,7 +116,7 @@ if ~simple
 end
 
 %% draw the loads
-blue = [0 0 256]/256;
+blue = [96 177 222]/256;
 if ~simple
     for i = 1:size(ps.shunt,1)
         P = ps.shunt(i,C.sh.P)/ps.baseMVA*ps.shunt(i,C.sh.factor);
