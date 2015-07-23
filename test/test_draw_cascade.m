@@ -13,7 +13,7 @@ sim_set = [1:10];
 % load the data
 disp('loading the data');
 load case2383_mod_ps;
-load pairdata4paul;
+load BOpairs;
 ps_org = ps;
 pairs = BOpairs;
 % take out each branch

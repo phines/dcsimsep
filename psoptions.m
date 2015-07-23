@@ -41,7 +41,8 @@ opt.sim.stop_on_sep = false; % When true, the simulator declares a blackout
                              % this depends on the blackout size in MW
 opt.sim.stop_threshold = 0; % the fraction of nodes in the giant component, or load still connected, at which to stop the simulation
 opt.sim.fast_ramp_mins = 1; % the minimum minutes of ramping that generators are allowed to do without load shedding
-opt.sim.use_control = 0;
+opt.sim.use_control = false;
+opt.sim.control_method = 'none';
 opt.sim.use_comm_model = false;
 opt.sim.dt_max_default = 60; % maximum amount of time between dcsimsep iterations
 opt.sim.simple_redispatch = false; % Simple method used by Zussman's model
