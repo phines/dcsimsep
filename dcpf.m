@@ -1,4 +1,4 @@
-function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding,verbose)
+function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids)
 % usage: [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding,verbose)
 % a very simple dc power flow calculation
 % if sub_grids are not specified, they are calculated from the graph.
@@ -6,16 +6,19 @@ function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding,verbose)
 % input check
 if nargin<1, error('ps structure must be specified'); end;
 if nargin<2, sub_grids = []; end
-if nargin<3, load_shedding=false; end
-if nargin<4, verbose = false; end
+%if nargin<3, load_shedding=false; end
+%if nargin<4, verbose = false; end
 
 % initialize outputs
 n_sub = []; %#ok<NASGU>
 
 % some constants
 C = psconstants;
-ps = updateps(ps);
 EPS = 1e-5;
+% Update the case data if needed
+if ~isfield(ps,'bus_i')
+    ps = updateps(ps);
+end
 
 % extract some data
 n = size(ps.bus,1);
@@ -83,37 +86,21 @@ for g = 1:n_sub
         error('multiple ref buses');
     end
     % measure the load imbalance in the system
-    if verbose
-        Pd_total = sum(Pd_full(subset));
-        Pg_total = sum(Pg_full(subset));
-        imbalance = Pd_total - Pg_total;
-        if abs(imbalance)>EPS
-            fprintf('DCPF: The total imbalanced in the system is %.4f pu\n',imbalance);
-        end
+    Pd_total = sum(Pd_full(subset));
+    Pg_total = sum(Pg_full(subset));
+    imbalance = Pd_total - Pg_total;
+    if abs(imbalance)>EPS
+        error('DCPF: The total imbalanced in subgrid %d of %d is %.4f pu.\n',g, n_sub,imbalance);
     end
-    % check for a blackout in this subgrid
-    if sum(Pd_full(subset))<=0 || sum(Pg_max_full(subset))<=0 %|| Pg_full(ref)<=0
-        if load_shedding
-            theta(subset) = 0;
-            Pg_full(subset) = 0;
-            Pd_full(subset) = 0;
-            Vmag(subset) = 0;
-            net_gen(subset) = 0;
-            % shut off shunts
-            bus_list = find(subset);
-            sh_subset = ismember(D,bus_list);
-            sf(sh_subset) = 0;
-            % shut off generators
-            ge_subset = ismember(G,bus_list);
-            ps.gen(ge_subset,C.ge.status) = 0;
-            if verbose
-                fprintf('dcpf found a blackout in subgrid %d of %d\n',g, n_sub);
-            end
-        else
-            disp('Power flow failed to converge');
-            ps = [];
-            return
-        end
+    % set flows to zero if there was no generation/load in an island
+    if sum(Pd_total)==0 && sum(Pg_total)==0 
+        theta(subset) = 0;
+        Vmag(subset) = 0;
+        net_gen(subset) = 0;
+        % shut off generators
+        bus_list = find(subset);
+        ge_subset = ismember(G,bus_list);
+        ps.gen(ge_subset,C.ge.status) = 0;
         ps.bus(subset,C.bu.status) = 0;
         continue
     end

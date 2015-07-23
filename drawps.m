@@ -3,8 +3,10 @@ function [x,y] = drawps(ps,opt)
 % usage: [x,y] = drawps(ps,options)
 % options are defined in psoptions
 
-cmap = colormap('jet');
+%cmap = colormap('jet');
+cmap = colormap('Copper');
 cmap = cmap(size(cmap,1):-1:1,:);
+cmap(64,:) = [1 1 1];
 n_color = size(cmap,1);
 cmap = cmap((n_color:-1:1),:);
 colormap(cmap);
@@ -54,8 +56,13 @@ for i = 1:size(ps.branch,1)
     flow_ratio = abs(flow)/flow_max(1);
     X = [x(f) x(t)];
     Y = [y(f) y(t)];
+<<<<<<< HEAD
     width = max(sqrt(flow)*width_base,width_min);
     color_ix = max(min( ceil(flow_ratio*n_color/flow_max_factor), n_color ),1);
+=======
+    width = max(flow*width_base,width_min);
+    color_ix = max(1,min( ceil(flow_ratio/2*n_color), n_color ));
+>>>>>>> 66be317674e4dfb07e029e4b3685e03a3fd0325a
     color = cmap(color_ix,:);
     if flow>flow_max
         drawline(X,Y,color,width,'k');
@@ -117,6 +124,7 @@ end
 
 %% draw the loads
 blue = [96 177 222]/256;
+%blue = [64 64 256]/256;
 if ~simple
     for i = 1:size(ps.shunt,1)
         P = ps.shunt(i,C.sh.P)/ps.baseMVA*ps.shunt(i,C.sh.factor);

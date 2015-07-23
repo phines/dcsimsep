@@ -31,9 +31,9 @@ Pd0_sum = sum(Pd0);
 relay_outages = zeros(0,2);
 ps.relay = relay_settings(ps,false,true);
 % some constants
-dt_max = opt.sim.dt_max_default;
 t_max = 60*30; % time limit for the simulation
 EPS = 1e-4;
+dt_max = 60; % for relays. This needs to change in future.
 
 % Grab some useful data
 C = psconstants;
@@ -82,7 +82,7 @@ ramp_rate( ~ge_status ) = 0; % plants that are shut down cannot ramp
 mis = total_P_mismatch(ps);
 if opt.debug && abs(mis)>EPS, error('Base case has mismatch'); end
 % Calculate the power flow
-ps = dcpf(ps,[],false,opt.verbose); % this one should not need to do any redispatch, just line flow calcs
+ps = dcpf(ps,[]); % this one should not need to do any redispatch, just line flow calcs
 % Get the power flow
 %flow = ps.branch(:,C.br.Pf);
 % Record the movie data if requested
@@ -146,7 +146,7 @@ while t < t_max
         ramp_dt = max(dt,opt.sim.fast_ramp_mins*60); % the amount of 
            % generator ramping time to allow. 
         max_ramp = ramp_rate*ramp_dt; 
-        [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,max_ramp,opt.verbose,opt);
+        [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,max_ramp,opt);
         % Error check:
         Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
         Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
@@ -160,7 +160,7 @@ while t < t_max
     end
     n_sub_old = n_sub;
     % run the power flow and record the flow
-    ps = dcpf(ps,sub_grids,true,opt.verbose);
+    ps = dcpf(ps,sub_grids);
     if opt.debug
         % Check that
         ge_status = ps.gen(:,C.ge.status);
@@ -229,7 +229,6 @@ while t < t_max
             break
         end
     end
-    
     % advance/print the time
     t = t + dt;
     if opt.verbose
@@ -259,7 +258,7 @@ while t < t_max
 end
 
 % do a final redispatch just to make sure
-[Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_rate*dt,opt.verbose,opt);
+[Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_rate*dt,opt);
 % Error check
 % if opt.debug
     Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;

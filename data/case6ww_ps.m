@@ -35,10 +35,10 @@ ps.gen = [...
 ];
 
 ps.shunt = [...
-%bus P Q frac_S frac_Z status type value 
- 4 70 70 1 0 1 1 100000 0;
- 5 70 70 1 0 1 1 100000 0;
- 6 70 70 1 0 1 1 100000 0;
+%bus P Q frac_S frac_Z status type value frac_E 
+ 4 70 70 1 0 1 1 100000 0 0;
+ 5 70 70 1 0 1 1 100000 0 0;
+ 6 70 70 1 0 1 1 100000 0 0;
 ];
 
 ps.areas = [...

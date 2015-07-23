@@ -45,9 +45,7 @@ opt.sim.use_control = 0;
 opt.sim.use_comm_model = false;
 opt.sim.dt_max_default = 60; % maximum amount of time between dcsimsep iterations
 opt.sim.simple_redispatch = false; % Simple method used by Zussman's model
-% legacy
-opt.simdc = opt.sim;
-
+opt.sim.relay_trip_time = 15; % time to trip an overcurrent relay with a 50% overload (seconds)
 
 %% drawing stuff
 opt.draw.width = 0.1;

@@ -176,13 +176,16 @@ switch opt.optimizer
         [x_star,fval,exitflag,output] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'linprog'
         [x_star,fval,exitflag,output] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
-    case 'mexosi'
+    
+    %{
+        case 'mexosi'
         error('mexosi is broken');
         A = [A_pf;A_flow_1;A_flow_2];
         b_max = [b_pf;b_flow_1;b_flow_2];
         b_min = -Inf(size(b_max));
         [x_star,~,exitflag] = osi(cost,x_min,x_max,A,b_min,b_max);
         %[x_star,~,exitflag,~] = linprog(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
+        %}
     case 'cvx'
         B = sparse(F,T,-inv_X,n,n) + ...
             sparse(T,F,-inv_X,n,n) + ...
@@ -228,10 +231,7 @@ if exitflag==1 || exitflag==1000
         disp('  Solved the emergency control problem');
     end
 else
-    keyboard
-    if opt.verbose
-        disp('  Optimization failed');
-    end
+    error('  Optimization failed');
     delta_Pg_pu = zeros(ng,1);
     delta_Pd_pu = zeros(nd,1);
     delta_Pg = zeros(ng,1);

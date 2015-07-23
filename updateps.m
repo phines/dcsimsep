@@ -9,10 +9,16 @@ C = psconstants;
 [n,bu_cols] = size(ps.bus);
 if bu_cols < C.bu.cols
     ps.bus = addcolumns(ps.bus,C.bu.cols);
-    % adjust the defaults if needed
-    ps.bus(:,C.bu.status) = 1;
-    ps.bus(:,C.bu.comm_status) = 1;
-    ps.bus(:,C.bu.grid_comm) = 1;
+    % initialize bus status variables to one if they did not previously exist
+    if bu_cols < C.bu.comm_status
+        ps.bus(:,C.bu.comm_status) = 1;
+    end
+	if bu_cols < C.bu.status
+		ps.bus(:,C.bu.status) = 1;
+	end
+	if bu_cols < C.bu.grid_comm
+        ps.bus(:,C.bu.grid_comm) = 1;
+	end
 end
 % branch
 if size(ps.branch,2) < C.br.cols

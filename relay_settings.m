@@ -1,9 +1,10 @@
-function relay = relay_settings(ps,distance,overcurrent,undervoltage)
+function relay = relay_settings(ps,distance,overcurrent,undervoltage,opt)
 % produce rough relay settings for ps
 
 if nargin<2, distance = true;     end
 if nargin<3, overcurrent = true;  end
 if nargin<4, undervoltage = true; end
+if nargin<5, opt = psoptions; end
 
 % extract data
 C = psconstants;
@@ -46,7 +47,7 @@ if overcurrent
     
     % settings
     Imax = ps.branch(:,C.br.rateB) / ps.baseMVA;
-    overload_max = Imax * 1.5 * 5; % 5 seconds at a 50% overload produces a trip
+    overload_max = Imax * 0.5 * opt.sim.relay_trip_time; % default: 15 seconds at a 50% overload produces a trip
     relay_oc_f(:,C.re.setting1)  = Imax;
     relay_oc_f(:,C.re.threshold) = overload_max;
     %relay_oc_t(:,C.re.setting1)  = Imax;
