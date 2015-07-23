@@ -11,7 +11,7 @@ Margaret J. Eppstein and Paul D. H. Hines. A "Random Chemistry" Algorithm for Id
 To get started with DCSIMSEP do the following:
 
 1. Navigate to the dcsimsep folder from within MATLAB
-2. Edit and run the startup.m script (this just sets up the paths)
+2. Edit and run the setup.m script (this just sets up the paths)
 3. Edit and run test_dcsimsep.m to run some tests.  
 
 
