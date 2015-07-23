@@ -26,7 +26,7 @@ toc
 fprintf('----------------------------------------------------------\n');
 tic
 ps = updateps(ps);
-ps = redispatch(ps);
+ps = rebalance(ps);
 ps = dcpf(ps);
 toc
 fprintf('----------------------------------------------------------\n');

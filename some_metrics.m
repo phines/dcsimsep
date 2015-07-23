@@ -11,7 +11,7 @@ opt.sim.stop_threshold = 0.90; % the fraction of nodes, at which to declare a ma
 load case2383_mod_ps;
 ps = case6_ps;
 ps = updateps(ps);
-ps = redispatch(ps);
+ps = rebalance(ps);
 ps = dcpf(ps);
 
 %% collect some data about the system

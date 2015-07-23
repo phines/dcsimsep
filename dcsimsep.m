@@ -63,7 +63,7 @@ end
 if opt.verbose
     fprintf('------- t = 0.00 ----------\n');
 end
-% Step 1. redispatch and run the DCPF
+% Step 1. rebalance and run the DCPF
 if ~isfield(ps,'bus_i')
     ps = updateps(ps);
 end
@@ -82,7 +82,7 @@ ramp_rate( ~ge_status ) = 0; % plants that are shut down cannot ramp
 mis = total_P_mismatch(ps);
 if opt.debug && abs(mis)>EPS, error('Base case has mismatch'); end
 % Calculate the power flow
-ps = dcpf(ps,[]); % this one should not need to do any redispatch, just line flow calcs
+ps = dcpf(ps,[]); % this one should not need to do any rebalance, just line flow calcs
 % Get the power flow
 %flow = ps.branch(:,C.br.Pf);
 % Record the movie data if requested
@@ -140,13 +140,13 @@ while t < t_max
     % Step 3. Find sub-grids in the network and check for major separation
     [sep,sub_grids,n_sub,p_out,busessep] = check_separation(ps,opt.sim.stop_threshold,opt.verbose);
         
-    % Step 4. redispatch & run the power flow
-    %  if there are new islands, redispatch the generators
+    % Step 4. rebalance & run the power flow
+    %  if there are new islands, rebalance the generators
     if n_sub>n_sub_old
         ramp_dt = max(dt,opt.sim.fast_ramp_mins*60); % the amount of 
            % generator ramping time to allow. 
         max_ramp = ramp_rate*ramp_dt; 
-        [Pg,ge_status,d_factor] = redispatch(ps,sub_grids,max_ramp,opt);
+        [Pg,ge_status,d_factor] = rebalance(ps,sub_grids,max_ramp,opt);
         % Error check:
         Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
         Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
@@ -257,8 +257,8 @@ while t < t_max
     it_no = it_no + 1;
 end
 
-% do a final redispatch just to make sure
-[Pg,ge_status,d_factor] = redispatch(ps,sub_grids,ramp_rate*dt,opt);
+% do a final rebalance just to make sure
+[Pg,ge_status,d_factor] = rebalance(ps,sub_grids,ramp_rate*dt,opt);
 % Error check
 % if opt.debug
     Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;

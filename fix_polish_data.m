@@ -9,7 +9,7 @@ ramp_rate = ps.gen(:,C.ge.Pmax);
 
 % run the initial dcpf
 C = psconstants;
-ps = redispatch(ps,ones(n,1),ramp_rate);
+ps = rebalance(ps,ones(n,1),ramp_rate);
 ps = dcpf(ps);
 ps_base = ps; % save the base case
 
@@ -40,9 +40,9 @@ for i=1:m
     % find the subgrids
     br_st = ps.branch(:,C.br.status)~=0;
     [sub_grids,n_sub] = findSubGraphs(ps.bus(:,1),ps.branch(br_st,1:2));
-    % redispatch if needed
+    % rebalance if needed
     if n_sub>1
-        ps = redispatch(ps,sub_grids,ramp_rate);
+        ps = rebalance(ps,sub_grids,ramp_rate);
     end
     % run the dclf
     ps = dcpf(ps,sub_grids,1);
@@ -104,9 +104,9 @@ for i=1:m
     % find the subgrids
     br_st = ps.branch(:,C.br.status)~=0;
     [sub_grids,n_sub] = findSubGraphs(ps.bus(:,1),ps.branch(br_st,1:2));
-    % redispatch if needed
+    % rebalance if needed
     if n_sub>1
-        ps = redispatch(ps,sub_grids,ramp_rate);
+        ps = rebalance(ps,sub_grids,ramp_rate);
     end
     % run the dclf
     ps = dcpf(ps,sub_grids);
