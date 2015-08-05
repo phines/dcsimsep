@@ -13,7 +13,6 @@ switch opt.sim.control_method
         
     case 'none'
         % Do nothing
-        %ps = ps;
     otherwise 
         error('Undefined control method');
 end

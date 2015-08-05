@@ -16,7 +16,6 @@ function [delta_Pd,delta_Pg,fval,output] = emergency_control(ps,measured_flow,br
 %% Prep work
 C = psconstants;
 EPS = 1e-6;
-f_over_cost = 100;
 
 % check the inputs
 if nargin<3, error('need at least 3 inputs'); end
@@ -104,8 +103,8 @@ x_min(ix.x.d_theta(ref_bus_num)) = 0;
 x_max(ix.x.d_theta(ref_bus_num)) = 0;
 
 cost = zeros(ix.nx,1);
-cost(ix.x.dPd) = -1;
-cost(ix.x.f_over) = f_over_cost;
+cost(ix.x.dPd) = -opt.sim.cost.load;
+cost(ix.x.f_over) = opt.sim.cost.overload;
 
 %% set up equality constraints
 % DC power flow constraint
@@ -218,7 +217,6 @@ switch opt.optimizer
         output = cvx_status;
         warning('on','MATLAB:nearlySingularMatrix'); % turn the warning back on
 end
-
 %% check and process the solution
 if exitflag==1
     delta_Pd_pu = x_star(ix.x.dPd);
@@ -228,7 +226,7 @@ if exitflag==1 || exitflag==1000
     delta_Pg = delta_Pg_pu * ps.baseMVA;
     delta_Pd = delta_Pd_pu * ps.baseMVA;
     if opt.verbose
-        disp('  Solved the emergency control problem');
+        fprintf('  Solved the emergency control problem. fval = %g.\n',fval);
     end
 else
     error('  Optimization failed');

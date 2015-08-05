@@ -12,7 +12,8 @@ if isempty(C)
 	C.REF = 3; % use for an ideal voltage source
     C.ISO = 4; % isolated bus
     C.PF  = 5; % participation factor gen/bus
-	
+	C.INF = Inf; % use to indicate an infinite bus
+    
 	%% constants used for devices that may be controllable:
 	C.NO_CONTROL = 1;
 	C.BINARY     = 2;
@@ -26,7 +27,7 @@ if isempty(C)
 	
 	%% other constants
 	C.EMTPY = -99999999; % used to indicate empty or un-filled values
-    C.DEFAULT_VALUE = 100000; % default value of a load ($/MVA)
+    C.DEFAULT_VALUE = 1000; % default value of a load ($/MVA)
 	
 	%% bus data (same as MATPOWER, though loads are not used---remain zeros)
 	C.bu.id     = 1;
@@ -70,9 +71,9 @@ if isempty(C)
 	C.br.R      = 3;  % resistance (p.u.)
 	C.br.X      = 4;  % line reactance (p.u.)
 	C.br.B      = 5;  % line charging for the whole line (not B/2) (p.u.)
-	C.br.rateA  = 6;  % normal line rating (pu)
-	C.br.rateB  = 7;  % short-term line rating (pu)
-	C.br.rateC  = 8;  % emergency line rating (pu)
+	C.br.rateA  = 6;  % normal line rating
+	C.br.rateB  = 7;  % short-term line rating
+	C.br.rateC  = 8;  % emergency line rating 
 	C.br.tap    = 9;  % tap ratio for transformer
 	C.br.shift  = 10; % phase shift caused by transformer
 	C.br.status = 11; % branch status (1, 0, C.F_OPEN, or C.T_OPEN)
@@ -87,8 +88,9 @@ if isempty(C)
 	C.br.switchable = 20; % used to indicate that the branch is switchable
     C.br.fail_rate = 21;  % failure rate of the branch (lambda - outages per year)
     C.br.type   = 22; % branch type;
-    C.br.contg_st   = 23; % 1 if the branch outage is of interest in contingency analysis, and 0 otherwise
-    C.br.col_names = {'from','to','R','X','B','rateA','rateB','rateC','tap','shift','status'};
+    C.br.id     = 23; % branch id
+    C.br.col_names = {'from','to','R','X','B','rateA','rateB','rateC','tap','shift','status',...
+        'Pf','Qf','Pt','Qt','mu_f','mu_t','Imag_f','Imag_t','switchable','fail_rate','type','id'};
 
 	C.br.cols = 23;   % min no. of cols for branch
 
@@ -126,9 +128,9 @@ if isempty(C)
     C.ge.ramp_rate_up = 18; % ramp rate up
     C.ge.ramp_rate_down = 19; % down ramp rate
     C.ge.col_names = {'bus','Pg','Qg','Qmax','Qmin','Vsp','mBase','status','Pmax','Pmin',...
-        'mu_Px','mu_Pn','mu_Qx','mu_Qn','type','cost','part_fact','RRU','RRD'};
+        'mu_Px','mu_Pn','mu_Qx','mu_Qn','type','cost','part_fact','RRU','RRD','id'};
 
-	C.ge.cols = 19; % min no. of cols
+	C.ge.cols = 20; % min no. of cols
     % synonyms
     C.gen  = C.ge;
     C.ge.P = C.ge.Pg;

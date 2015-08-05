@@ -21,7 +21,7 @@ opt.pf.CalcIslands = 1; % iteratively calculates each island in runPowerFlow
 opt.pf.CascadingPowerFlow = 0;
 opt.pf.flat_start = 0;
 opt.pf.load_shed_rate = 0.25; % the rate at which under frequency load shedding is done in CascadingPowerFlow mode
-opt.pf.linesearch = 'backtrack';
+opt.pf.linesearch = 'exact';
 opt.pf.update = true;
 
 %% optimal power flow options
