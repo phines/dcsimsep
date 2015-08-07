@@ -11,7 +11,7 @@ opt.verbose = false; % set this to false if you don't want stuff on the command 
 % Stopping criterion: (set to zero to simulate a complete cascade)
 opt.sim.stop_threshold = 0.00; % the fraction of nodes, at which to declare a major separation
 opt.sim.fast_ramp_mins = 1;
-opt.sim.simple_redispatch = true;
+opt.sim.simple_redispatch = false;
 
 
 %% Prepare and run the simulation for the Polish grid

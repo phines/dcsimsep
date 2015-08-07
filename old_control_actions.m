@@ -1,4 +1,4 @@
-function ps = old_control_actions(ps,sub_grids,ramp_rate,dt,it_no,opt)
+function [ps, MW_lost] = old_control_actions(ps,sub_grids,ramp_rate,it_no,opt)
 
 % Constants
 C = psconstants;
@@ -15,6 +15,7 @@ Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
 Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
 G = ps.bus_i(ps.gen(:,1));
 D = ps.bus_i(ps.shunt(:,1));
+Pd0 = ps.shunt(:,C.sh.P) .* ps.shunt(:,C.sh.factor);
 
 % If we are to use the comm model do:
 if opt.sim.use_comm_model
@@ -86,7 +87,7 @@ if any(abs(measured_flow)>flow_max)
         error('System not balanced on entry to take_control_actions');
     end
     % Figure out the ramp rate
-    ramp_dt = min(dt,opt.sim.dt_max_default); % the amount of generator ramping time to allow
+    ramp_dt = opt.sim.fast_ramp_mins * 60; 
     max_ramp = ramp_rate*ramp_dt;
     % Find the optimal load/gen shedding
     [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,measured_branch_st,max_ramp,comm_status,opt);
@@ -121,7 +122,7 @@ if any(abs(measured_flow)>flow_max)
             Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
         end
         % Run dcpf to get subgrids
-        ps = dcpf(ps,sub_grids,true,opt.verbose);
+        ps = dcpf(ps,sub_grids);
         % Check to make sure things are within bounds
         Pg = ps.gen(:,C.ge.Pg);
 %         if any( Pg>Pg_max | Pg<Pg_min )
@@ -129,4 +130,17 @@ if any(abs(measured_flow)>flow_max)
             error('Pg is out of bounds'); 
         end
     end
+    Pd = ps.shunt(:,C.sh.P) .* ps.shunt(:,C.sh.factor);
+    Pg = ps.gen(:,C.ge.P) .* ps.gen(:,C.ge.status);
+    if abs(sum(Pd)-sum(Pg)) > EPS
+        error('Something is wrong.')
+    else
+        MW_lost = sum(Pd0) - sum(Pd);
+    end
+else
+    MW_lost = 0;
 end
+
+
+
+

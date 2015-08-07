@@ -46,7 +46,7 @@ if overcurrent
     %relay_oc_t(:,C.re.bus_loc)    = bus_nos(T);
     
     % settings
-    Imax = ps.branch(:,C.br.rateB) / ps.baseMVA;
+    Imax = ps.branch(:,opt.opf.contg_rate) / ps.baseMVA;
     overload_max = Imax * 0.5 * opt.sim.relay_trip_time; % default: 15 seconds at a 50% overload produces a trip
     relay_oc_f(:,C.re.setting1)  = Imax;
     relay_oc_f(:,C.re.threshold) = overload_max;

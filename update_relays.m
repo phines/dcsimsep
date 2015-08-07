@@ -35,7 +35,7 @@ for r =1:nr
                 Imag = ps.branch(br_i,C.br.Imag_t);
             end
             excess(r) = (Imag - Imax);
-            if Imag>Imax
+            if Imag > Imax + BIG_EPS
                 n_over = n_over+1;
             end
             dist_to_threshold = relay(r,C.re.threshold) - relay(r,C.re.state_a);
@@ -58,7 +58,11 @@ end
 
 % figure out the time step size
 [dt_trip,~] = min(trip_t(trip_t>0));
-dt = min(dt_max,dt_trip);
+if dt_trip > 1e6
+    dt = Inf; % This stops simulation once it gets out of update_relays 
+else
+    dt = min(dt_max,dt_trip);
+end
 
 % update all of the relays based on their excess
 relay(:,C.re.state_a) = max(relay(:,C.re.state_a) + excess*dt + SMALL_EPS,0);

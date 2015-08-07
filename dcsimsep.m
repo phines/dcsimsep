@@ -19,6 +19,8 @@ end
 % init the outputs
 C = psconstants;
 is_blackout = 0;
+MW_lost = struct('rebalance',0,'control',0);
+verbose = opt.verbose;
 
 p_out=0;  
 busessep=[];  
@@ -31,12 +33,11 @@ Pd0_sum = sum(Pd0);
 relay_outages = zeros(0,2);
 ps.relay = relay_settings(ps,false,true);
 % some constants
-t_max = 60*30; % time limit for the simulation
+t_max = opt.sim.t_max; % time limit for the simulation
 EPS = 1e-4;
-dt_max = 60; % for relays. This needs to change in future.
+dt_max = opt.sim.dt; % for relays. This needs to change in future.
 
 % Grab some useful data
-C = psconstants;
 n = size(ps.bus,1);
 %m = size(ps.branch,1);
 F = ps.bus_i(ps.branch(:,1));
@@ -60,7 +61,7 @@ if all(ramp_rate==0)
     ramp_rate = ramp_rate_MW_per_min/60;
 end
 % Print the time
-if opt.verbose
+if verbose
     fprintf('------- t = 0.00 ----------\n');
 end
 % Step 1. rebalance and run the DCPF
@@ -84,7 +85,7 @@ if opt.debug && abs(mis)>EPS, error('Base case has mismatch'); end
 % Calculate the power flow
 ps = dcpf(ps,[]); % this one should not need to do any rebalance, just line flow calcs
 % Get the power flow
-%flow = ps.branch(:,C.br.Pf);
+% flow = ps.branch(:,C.br.Pf);
 % Record the movie data if requested
 
 if nargout>5
@@ -98,14 +99,14 @@ end
 
 % Step 2. Apply exogenous outages
 t = 1;
-if opt.verbose
+if verbose
     fprintf('------- t = %.3f ----------\n',t);
     fprintf('Exogenous events:\n');
 end
 % Apply the branch outages
 if ~isempty(br_outages)
     ps.branch(br_outages,C.br.status) = 0;
-    if opt.verbose
+    if verbose
         fprintf(' Removed branch %d\n',br_outages);
     end
 end
@@ -122,7 +123,7 @@ if ~isempty(bus_outages)
         % trip gens and shunts at this bus
         ps.gen  (G==bus_ix,C.ge.status) = 0;
         ps.shunt(D==bus_ix,C.sh.status) = 0;
-        if opt.verbose
+        if verbose
             fprintf(' Removed bus %d\n',bus_no);
         end
     end
@@ -133,19 +134,24 @@ if nargout>5
     movie_data = record_movie_data(movie_data,t,ps,sub_grids);
 end
 
+% set up agents if this is distributed
+if strcmp(opt.sim.control_method,'distributed_control')
+    ps_agents = set_up_agents(ps,opt);
+    if verbose, fprintf('setting up agents...\n'); end
+end
+keyboard
 % Begin the main while loop for DCSIMSEP
 it_no = 1;
-dt = 10.00; % This initial time step sets the quantity of initial gen ramping.
-while t < t_max
+while true
     % Step 3. Find sub-grids in the network and check for major separation
-    [sep,sub_grids,n_sub,p_out,busessep] = check_separation(ps,opt.sim.stop_threshold,opt.verbose);
+    [sep,sub_grids,n_sub,p_out,busessep] = check_separation(ps,opt.sim.stop_threshold,verbose);
         
     % Step 4. rebalance & run the power flow
     %  if there are new islands, rebalance the generators
     if n_sub>n_sub_old
-        ramp_dt = max(dt,opt.sim.fast_ramp_mins*60); % the amount of 
-           % generator ramping time to allow. 
-        max_ramp = ramp_rate*ramp_dt; 
+        ramp_dt = opt.sim.fast_ramp_mins*60; % do a minute of ramping before gen tripping/load shedding 
+        max_ramp = ramp_rate*ramp_dt;
+        Pd_old = sum(ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor));
         [Pg,ge_status,d_factor] = rebalance(ps,sub_grids,max_ramp,opt);
         % Error check:
         Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
@@ -156,7 +162,9 @@ while t < t_max
         ps.shunt(:,C.sh.factor) = d_factor;
         ps.gen(:,C.ge.status) = ge_status;
         ps.gen(:,C.ge.P) = Pg;
-        ramp_rate(~ge_status)=0; % make sure that failed generators don't ramp
+        ramp_rate(~ge_status) = 0; % make sure that failed generators don't ramp
+        Pd_new = sum(ps.shunt(:,C.sh.P).*d_factor);
+        MW_lost.rebalance = MW_lost.rebalance + Pd_old - Pd_new;
     end
     n_sub_old = n_sub;
     % run the power flow and record the flow
@@ -170,10 +178,7 @@ while t < t_max
         if any( round(Pg)<round(Pg_min-EPS) | round(Pg)>round(Pg_max+EPS) ), 
             keyboard
             error('Pg is out of bounds');
-        end        
-%         if any( Pg<Pg_min | Pg>Pg_max ),         
-%             keyboard, error('Pg is out of bounds');
-%         end
+        end
     end
     % Extract and record the flows
     %flow  = ps.branch(:,C.br.Pf);
@@ -183,30 +188,32 @@ while t < t_max
     end
 
     % Step 4a. Take control actions if needed.
-    if opt.sim.use_control
+    switch opt.sim.control_method
         % Compute and implement emergency control actions
         %  Note that this code also interfaces with a python comm. model,
         %  if requested in the options structure
-        ps = take_control_actions(ps,sub_grids,ramp_rate,dt,it_no,opt);
+        case 'emergency_control'
+            [ps, MW_lost_control] = old_control_actions(ps,sub_grids,ramp_rate,it_no,opt);
+        case 'distributed_control' % distributed emergency control 
+            [ps, MW_lost_control] = dist_control(ps_agents,ps,sub_grids,ramp_rate,opt);
+        case 'none'
+            MW_lost_control = 0;
+        otherwise
+            error('Undefined control method.')
     end
+    MW_lost.control = MW_lost.control + MW_lost_control;
     % Step 5. Update relays
-    [ps.relay,br_out_new,dt,n_over] = update_relays(ps,opt.verbose,dt_max);
-    if opt.verbose && n_over>0
+    [ps.relay,br_out_new,dt,n_over] = update_relays(ps,verbose,dt_max);
+    if verbose && n_over>0
         fprintf(' There are %d overloads in the system\n',n_over);
     end
     
-    % Step 6. Check for any remaining overload potential, decide if we
-    % should stop the simulation
-    if dt==Inf
-        is_blackout = 0;
-        break
-    end
     % If we want to stop when the network is divided into subnetworks, do
     % this:
     if opt.sim.stop_on_sep
         if sep==BIG_SEP
             is_blackout = 1;
-            if opt.verbose
+            if verbose
                 fprintf('-------------- t = %.3f ----------------\n',t);
                 fprintf('----------- Major separation -----------\n');
             end
@@ -215,13 +222,13 @@ while t < t_max
     else % If we wanted to stop after a certain amount of load shedding, do this:
         Pd_sum = sum(ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor));
         load_remaining_fraction = Pd_sum/Pd0_sum;
-        if opt.verbose
+        if verbose
             %fprintf('------------- t = %.3f ---------------\n',t);
             fprintf('-------- %.1f%% of load remains --------\n',load_remaining_fraction*100);
         end
         if load_remaining_fraction<opt.sim.stop_threshold && ~is_blackout
             is_blackout = 1;
-            if opt.verbose
+            if verbose
                 fprintf('----------- Blackout occurred ----------\n');
             end
         end
@@ -229,9 +236,19 @@ while t < t_max
             break
         end
     end
+    % Step 6. Check for any remaining overload potential, decide if we
+    % should stop the simulation
+    if dt==Inf
+        t = t + opt.sim.fast_ramp_mins*60;
+        break
+    end
     % advance/print the time
     t = t + dt;
-    if opt.verbose
+    if t > t_max % stop if the next outage happens after t_max
+        t = t_max;
+        break
+    end
+    if verbose
         fprintf('------- t = %.3f ----------\n',t);
     end
     
@@ -249,16 +266,16 @@ while t < t_max
     end
     
     % print something
-    if opt.verbose && ~isempty(br_out_new)
+    if verbose && ~isempty(br_out_new)
         fprintf(' Branch %d triped on overcurrent\n',br_out_new);
     end
     
     % Increment the counter and return to step 3.
     it_no = it_no + 1;
 end
-
+max_ramp = ramp_rate * opt.sim.fast_ramp_mins*60;
 % do a final rebalance just to make sure
-[Pg,ge_status,d_factor] = rebalance(ps,sub_grids,ramp_rate*dt,opt);
+[Pg,ge_status,d_factor] = rebalance(ps,sub_grids,max_ramp,opt);
 % Error check
 % if opt.debug
     Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
@@ -272,16 +289,22 @@ ps.gen(:,C.ge.status) = ge_status;
 ps.gen(:,C.ge.P) = Pg;
 % Compute the amount of load lost
 Pd = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
-MW_lost = sum(Pd0) - sum(Pd);
+total_MW_lost = Pd0_sum - sum(Pd);
+if abs(total_MW_lost - (MW_lost.control + MW_lost.rebalance)) > EPS
+    error('Something is wrong.')
+end
 
 % Print something
-if opt.verbose
+if verbose
     n_overloads = sum(ps.branch(:,C.br.Pf)>ps.branch(:,C.br.rateB));
     fprintf('-------------- t = %7.3f -----------------\n',t);
     fprintf(' Simulation complete\n');
     fprintf('  %d emergency (rateB) overloads remain\n',n_overloads);
     fprintf('  %d endogenous relay outages\n',size(relay_outages,1));
-    fprintf('  %g MW load lost (%.1f%%)\n',MW_lost,MW_lost/Pd0_sum*100);
+    fprintf('  %g MW load lost (%.1f%%)\n',total_MW_lost,total_MW_lost/Pd0_sum*100);
+    fprintf('  %g MW (%.1f%%) in rebalance,  %g MW (%.1f%%) in control\n', ...
+        MW_lost.rebalance, MW_lost.rebalance/Pd0_sum*100, ...
+        MW_lost.control, MW_lost.control/Pd0_sum*100);
     fprintf('--------------------------------------------\n');
 end
 

@@ -7,10 +7,12 @@ function ps = take_control_actions(ps,sub_grids,ramp_rate,dt,it_no,opt)
 switch opt.sim.control_method
     case 'emergency_control'
         ps = old_control_actions(ps,sub_grids,ramp_rate,dt,it_no,opt);
-    case 'mpc'
-        % call Pooya's code
+    case 'emergency_control_dec' % decentralized emergency control (no MPC)
+        ramp_limits = ramp_rate * dt;
+        ps = dec_control(ps,sub_grids,ramp_limits,opt);
     case 'distributed_mpc'
-        
+        ramp_limits = ramp_rate * dt;
+        ps = dist_mpc_control(ps,sub_grids,ramp_limits,opt);
     case 'none'
         % Do nothing
     otherwise 
