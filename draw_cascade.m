@@ -104,7 +104,7 @@ if nargin>3 && do_sequence
         link_status(br_no) = false;
         % plot the nodes in groups
         plot_nodes(nodes,links(link_status,:),locs);
-        [graphNos,nSubGraphs] = findSubGraphs(nodes,links(link_status,:));
+        [graphNos,nSubGraphs] = find_subgraphs(nodes,links(link_status,:));
         if nSubGraphs>1
             colors = hsv(nSubGraphs);
         else
@@ -131,8 +131,7 @@ return
 % subfunction to just plot the nodes
 function plot_nodes(nodes,links,locs)
 
-
-[graphNos,nSubGraphs] = findSubGraphs(nodes,links);
+[graphNos,nSubGraphs] = find_subgraphs(nodes,links);
 colors = {'r','b','g','y','w','c','m'};
 nc = length(colors);
 

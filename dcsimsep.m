@@ -37,6 +37,12 @@ t_max = opt.sim.t_max; % time limit for the simulation
 EPS = 1e-4;
 dt_max = opt.sim.dt; % for relays. This needs to change in future.
 
+% set up agents if this is distributed
+if strcmp(opt.sim.control_method,'distributed_control')
+    ps_agents = set_up_agents(ps,opt);
+    if verbose, fprintf('setting up agents...\n'); end
+end
+
 % Grab some useful data
 n = size(ps.bus,1);
 %m = size(ps.branch,1);
@@ -73,7 +79,7 @@ br_st = ps.branch(:,C.br.status)~=0;
 if opt.debug && abs(Pd0_sum - Pg0_sum)>EPS
     error('The base case power system is not load balanced');
 end
-[sub_grids,n_sub_old] = findSubGraphs(ps.bus(:,1),ps.branch(br_st,1:2));
+[sub_grids,n_sub_old] = find_subgraphs(ps.bus(:,1),ps.branch(br_st,1:2));
 if n_sub_old>1
     error('The base case has more than one island');
 end
@@ -134,12 +140,6 @@ if nargout>5
     movie_data = record_movie_data(movie_data,t,ps,sub_grids);
 end
 
-% set up agents if this is distributed
-if strcmp(opt.sim.control_method,'distributed_control')
-    ps_agents = set_up_agents(ps,opt);
-    if verbose, fprintf('setting up agents...\n'); end
-end
-keyboard
 % Begin the main while loop for DCSIMSEP
 it_no = 1;
 while true

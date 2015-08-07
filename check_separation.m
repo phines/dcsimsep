@@ -18,7 +18,7 @@ SMALL_SEP = 1;
 
 % find the subgraphs
 br_status = (ps.branch(:,C.br.status)~=0);
-[sub_grids,n_sub] = findSubGraphs(ps.bus(:,1),ps.branch(br_status,1:2));
+[sub_grids,n_sub] = find_subgraphs(ps.bus(:,1),ps.branch(br_status,1:2));
 
 % if there are no subgraphs, 
 if n_sub == 1

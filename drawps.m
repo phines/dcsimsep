@@ -56,13 +56,13 @@ for i = 1:size(ps.branch,1)
     flow_ratio = abs(flow)/flow_max(1);
     X = [x(f) x(t)];
     Y = [y(f) y(t)];
-<<<<<<< HEAD
+%<<<<<<< HEAD
     width = max(sqrt(flow)*width_base,width_min);
     color_ix = max(min( ceil(flow_ratio*n_color/flow_max_factor), n_color ),1);
-=======
-    width = max(flow*width_base,width_min);
-    color_ix = max(1,min( ceil(flow_ratio/2*n_color), n_color ));
->>>>>>> 66be317674e4dfb07e029e4b3685e03a3fd0325a
+%=======
+%    width = max(flow*width_base,width_min);
+%    color_ix = max(1,min( ceil(flow_ratio/2*n_color), n_color ));
+%>>>>>>> 66be317674e4dfb07e029e4b3685e03a3fd0325a
     color = cmap(color_ix,:);
     if flow>flow_max
         drawline(X,Y,color,width,'k');

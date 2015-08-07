@@ -68,7 +68,7 @@ is_D_conn = ismember(D,comm_connected_buses);
 %% edit this code so that it operates separately on each sub-grid
 nodes = (1:n)';
 links = [F,T];
-[grid_no,n_sub] = findSubGraphs(nodes,links);
+[grid_no,n_sub] = find_subgraphs(nodes,links);
 
 %% set up an index so that we can find things
 ix.x.d_theta = (1:n);

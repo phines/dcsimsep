@@ -8,6 +8,8 @@ C = psconstants; % tells me where to find my data
 opt = psoptions;
 % opt.sim.control_method = 'none';
 opt.sim.control_method = 'distributed_control';
+opt.sim.nHopExt = 1;
+opt.sim.nHopLoc = 1;
 % opt.sim.control_method = 'emergency_control';
 opt.verbose = true;
 opt.sim.t_max = 30*60;
@@ -25,7 +27,7 @@ disp('loading the data');
 % toc
 load('ps_polish_all','ps_polish_100');
 ps = ps_polish_100;
-ps = case30_mod_ps;
+%ps = case30_mod_ps;
 
 fprintf('----------------------------------------------------------\n');
 tic
@@ -46,8 +48,9 @@ ps = rebalance(ps,[],[],opt);
 
 %% Run one extreme case
 %load crashedINsimulateDC br_outages;
-load ../BOpairs2;
-br_outages = BOpairs(1,:);
+outage_number = 4;
+load ../data/BOpairs2;
+br_outages = BOpairs(outage_number,:);
 % opt.control_method = 'emergency_control';
 [is_bo,~,MW_lost] = dcsimsep(ps,br_outages,[],opt);
 return

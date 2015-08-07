@@ -38,7 +38,7 @@ fmax_all = ps_agent.branch(br_st,C.br.rateB)/ps_agent.baseMVA;
 fmax = fmax_all(br_id);
 % assign one ref bus for each island: choose a bus that is already closest to zero
 nodes = (1:nbus)'; links = [F,T];
-grid_no = FindSubGraphs(nodes,links);
+grid_no = find_subgraphs(nodes,links);
 n_sub = max(grid_no);
 ref_bus_i = zeros(n_sub,1);
 theta = ps_agent.bus(:,C.bu.Vang) * pi / 180;

@@ -52,7 +52,7 @@ while n_hat>n
         links_tmp(dead_links,:) = [];
     end
     % test for connectedness
-    [~,n_sub] = findSubGraphs(nodes_tmp,links_tmp);
+    [~,n_sub] = find_subgraphs(nodes_tmp,links_tmp);
     if n_sub==1
         nodes = nodes_tmp;
         links = links_tmp;
@@ -74,7 +74,7 @@ while m_hat > m
     links_tmp = links;
     links_tmp(r,:) = [];
     % test for connectedness
-    [~,n_sub] = findSubGraphs(nodes,links_tmp);
+    [~,n_sub] = find_subgraphs(nodes,links_tmp);
     if n_sub==1
         links = links_tmp;
         m_hat = size(links,1);

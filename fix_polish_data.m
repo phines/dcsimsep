@@ -39,7 +39,7 @@ for i=1:m
     ps.branch(i,C.br.status) = 0;
     % find the subgrids
     br_st = ps.branch(:,C.br.status)~=0;
-    [sub_grids,n_sub] = findSubGraphs(ps.bus(:,1),ps.branch(br_st,1:2));
+    [sub_grids,n_sub] = find_subgraphs(ps.bus(:,1),ps.branch(br_st,1:2));
     % rebalance if needed
     if n_sub>1
         ps = rebalance(ps,sub_grids,ramp_rate);
@@ -103,7 +103,7 @@ for i=1:m
     ps.branch(i,C.br.status) = 0;
     % find the subgrids
     br_st = ps.branch(:,C.br.status)~=0;
-    [sub_grids,n_sub] = findSubGraphs(ps.bus(:,1),ps.branch(br_st,1:2));
+    [sub_grids,n_sub] = find_subgraphs(ps.bus(:,1),ps.branch(br_st,1:2));
     % rebalance if needed
     if n_sub>1
         ps = rebalance(ps,sub_grids,ramp_rate);

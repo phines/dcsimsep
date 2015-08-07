@@ -22,7 +22,7 @@ if nargin<2 || isempty(sub_grids)
     nodes = ps.bus(:,C.bu.id);
     br_st = (ps.branch(:,C.br.status) == 1);
     links = [ps.branch(br_st,C.br.from), ps.branch(br_st,C.br.to)];
-    sub_grids = findSubGraphs(nodes,links);
+    sub_grids = find_subgraphs(nodes,links);
 end
 ge_status = ps.gen(:,C.ge.status)==1;
 if nargin<3||isempty(ramp_limits), ramp_limits=ps.gen(:,C.ge.Pmax).*ge_status; end

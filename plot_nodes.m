@@ -1,7 +1,7 @@
 function nSubGraphs = plot_nodes(nodes,links,locs)
 
 
-[graphNos,nSubGraphs] = findSubGraphs(nodes,links);
+[graphNos,nSubGraphs] = find_subgraphs(nodes,links);
 map = colormap('hsv');
 randseed(1); % deterministic randomness
 R = randperm(size(map,1));

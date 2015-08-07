@@ -55,7 +55,7 @@ end
 
 % find sub-grids
 if isempty(sub_grids)
-    [sub_grids,n_sub] = findSubGraphs(ps.bus(:,1),ps.branch(br_st,1:2));
+    [sub_grids,n_sub] = find_subgraphs(ps.bus(:,1),ps.branch(br_st,1:2));
 else
     n_sub = length(unique(sub_grids));
 end

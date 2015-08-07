@@ -40,7 +40,7 @@ end
 %% Print branch data
 nbr = size(ps.branch,1);
 disp('----------------------------- Branch Data ------------------------------------------------');
-disp(' ID  From    To  st  contg_st Pf(MW) Qf(MVAr)   Pt(MW) Qt(MVAr)   Rate A  |If|(A)  |It|(A)  ');
+disp(' ID  From    To  st   Pf(MW)  Qf(MVAr)   Pt(MW) Qt(MVAr)   Rate A  |If|(A)  |It|(A)  ');
 disp('------------------------------------------------------------------------------------------');
 for i = 1:nbr
     from = ps.branch(i,1);
@@ -53,8 +53,8 @@ for i = 1:nbr
     If = ps.branch(i,C.br.Imag_f) * baseIf;
     It = ps.branch(i,C.br.Imag_t) * baseIt;
     rateA = ps.branch(i,C.br.rateA);
-    fprintf('%3d %5d %5d %3d %6d %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f\n', ...
-        [i from to ps.branch(i,C.br.status) ps.branch(i,C.br.contg_st) Sft rateA If It]);
+    fprintf('%3d %5d %5d %3d %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f\n', ...
+        [i from to ps.branch(i,C.br.status) Sft rateA If It]);
 end
 
 %% Print gen data
