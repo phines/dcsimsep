@@ -17,9 +17,14 @@ if nargin<4
 end
 
 % init the outputs
-C = psconstants;
 is_blackout = 0;
-MW_lost = struct('rebalance',0,'control',0);
+MW_lost = struct('rebalance',0,'control',0,'cont_rebalance',0);
+imbalance = 0;
+% rebalance: MW_lost after islanding in rebalance.m
+% control: MW_lost due to load shedding in emergency control (central and
+% distributed)
+% cont_rebalance: MW_lost in rebalance after distributed control, in case
+% it caused some imbalance (it does not most of the times)
 verbose = opt.verbose;
 
 p_out=0;  
@@ -27,6 +32,7 @@ busessep=[];
 
 % Initialize
 t = 0;
+C = psconstants;
 Pd0 = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
 %Pd = Pd0;
 Pd0_sum = sum(Pd0);
@@ -87,7 +93,7 @@ end
 ramp_rate( ~ge_status ) = 0; % plants that are shut down cannot ramp
 % Check the mismatch
 mis = total_P_mismatch(ps);
-if opt.debug && abs(mis)>EPS, error('Base case has mismatch'); end
+if abs(mis)>EPS, error('Base case has mismatch'); end
 % Calculate the power flow
 ps = dcpf(ps,[]); % this one should not need to do any rebalance, just line flow calcs
 % Get the power flow
@@ -193,15 +199,17 @@ while true
         %  Note that this code also interfaces with a python comm. model,
         %  if requested in the options structure
         case 'emergency_control'
-            [ps, MW_lost_control] = old_control_actions(ps,sub_grids,ramp_rate,it_no,opt);
+            [ps, MW_lost_control, mis] = old_control_actions(ps,sub_grids,ramp_rate,it_no,opt);
         case 'distributed_control' % distributed emergency control 
-            [ps, MW_lost_control] = dist_control(ps_agents,ps,sub_grids,ramp_rate,opt);
+            [ps, MW_lost_control, mis] = dist_control(ps_agents,ps,sub_grids,ramp_rate,opt);
         case 'none'
             MW_lost_control = 0;
+            mis = 0;
         otherwise
             error('Undefined control method.')
     end
     MW_lost.control = MW_lost.control + MW_lost_control;
+    imbalance = imbalance + mis; 
     % Step 5. Update relays
     [ps.relay,br_out_new,dt,n_over] = update_relays(ps,verbose,dt_max);
     if verbose && n_over>0
@@ -305,6 +313,10 @@ if verbose
     fprintf('  %g MW (%.1f%%) in rebalance,  %g MW (%.1f%%) in control\n', ...
         MW_lost.rebalance, MW_lost.rebalance/Pd0_sum*100, ...
         MW_lost.control, MW_lost.control/Pd0_sum*100);
+    if imbalance > 0
+        fprintf('  %g MW (%.1f%%) imbalance occured due to control.',...
+            imabalance, imbalance/Pd0_sum*100);
+    end
     fprintf('--------------------------------------------\n');
 end
 

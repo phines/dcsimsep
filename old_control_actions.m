@@ -1,8 +1,8 @@
-function [ps, MW_lost] = old_control_actions(ps,sub_grids,ramp_rate,it_no,opt)
+function [ps, MW_lost, imbalance] = old_control_actions(ps,sub_grids,ramp_rate,it_no,opt)
 
 % Constants
 C = psconstants;
-EPS = 1e-3;
+EPS = 1e-4;
 % Collect some data from the system
 n = size(ps.bus,1);
 m = size(ps.branch,1);
@@ -16,6 +16,7 @@ Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;
 G = ps.bus_i(ps.gen(:,1));
 D = ps.bus_i(ps.shunt(:,1));
 Pd0 = ps.shunt(:,C.sh.P) .* ps.shunt(:,C.sh.factor);
+imbalance = 0;
 
 % If we are to use the comm model do:
 if opt.sim.use_comm_model
@@ -114,6 +115,7 @@ if any(abs(measured_flow)>flow_max)
         ps.shunt(:,C.sh.factor) = max(0,min(lf_new,1));
         % Get the new mismatch
         mis_new = total_P_mismatch(ps,sub_grids);
+        imbalance = imbalance + mis_new;
         % If there was an error in the balance, run rebalance again
         if abs(mis_new)>EPS
             ps = rebalance(ps,sub_grids,max_ramp,opt.verbose);

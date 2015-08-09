@@ -48,7 +48,7 @@ ps = rebalance(ps,[],[],opt);
 
 %% Run one extreme case
 %load crashedINsimulateDC br_outages;
-outage_number = 4;
+outage_number = 12;
 load ../data/BOpairs2;
 br_outages = BOpairs(outage_number,:);
 % opt.control_method = 'emergency_control';

@@ -11,9 +11,9 @@ mis = 0;
 Pd = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
 Pg = ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status);
 mis = sum(Pg) - sum(Pd);
-if abs(mis)>EPS
-    keyboard
-end
+% if abs(mis)>EPS
+%     keyboard
+% end
 
 if nargin>1
     % map the mismatch to buses

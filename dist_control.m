@@ -1,4 +1,4 @@
-function [ps, MW_lost] = dist_control(ps_agents,ps,sub_grids,ramp_rate,opt)
+function [ps, MW_lost, imbalance] = dist_control(ps_agents,ps,sub_grids,ramp_rate,opt)
 % distributed emergency control
 C = psconstants;
 EPS = 1e-4;
@@ -9,6 +9,7 @@ verbose = opt.verbose;
 Pd0 = ps.shunt(:,C.sh.P) .* ps.shunt(:,C.sh.factor);
 G = ps.bus_i(ps.gen(:,C.ge.bus));
 D = ps.bus_i(ps.shunt(:,C.sh.bus));
+imbalance = 0;
 
 for i = 1:nbus
     % all agents collect data from the ps structure (measurements)
@@ -28,8 +29,8 @@ for bus_i_f = 1:nbus
         bus_i_t = ps_agents(bus_i_f).bus_i(ps_agents(bus_i_f).branch(br_over_id,C.br.to));
         bus_i_t = full(bus_i_t);
         if verbose
-            bus_id_f = find(ps_agents(bus_i_f).bus_i == bus_i_f);
-            bus_id_t = find(ismember(ps_agents(bus_i_f).bus_i, bus_i_t));
+            bus_id_f = ps_agents(bus_i_f).bus(bus_i_f,1);
+            bus_id_t = ps_agents(bus_i_f).bus(bus_i_t,1);
             fprintf('Bus %d found overload on line(s): ', bus_id_f);
             fprintf('%d(%d-%d) ', ...
                 [br_over_id';repmat(bus_id_f,1,length(br_over_id));bus_id_t']);
@@ -52,7 +53,7 @@ for bus_i_f = 1:nbus
             % agents in the extended neighborhood send outage data to the from bus
             agent_send_msg(msg_ext,'extended',bus_i_f)
         end
-        OptVarBusID = find(ismember(ps_agents(bus_i_f).bus_i,local_nei)); % bus IDs of the local neighborhood
+        OptVarBusID = ps_agents(bus_i_f).bus(local_nei,1); % bus IDs of the local neighborhood
         approved = false; % this will change to true if the optimization is solved and there is enough capacity for implementation
         continue_flag = false;
         while ~approved
@@ -96,6 +97,15 @@ for bus_i_f = 1:nbus
 end
 % implement all solutions from each agent on ps
 ps = implement_solution(ps,ps_agents,verbose);
+Pd = ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor);
+Pg = ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status);
+mis = sum(Pg) - sum(Pd);
+if mis > EPS
+    % record and do a rebalance
+    imbalance = imbalance + mis; 
+    ps = rebalance(ps,sub_grids,ramp_limits,verbose);
+end
+
 % run power flow on ps 
 ps = dcpf(ps,sub_grids);
 Pg = ps.gen(:,C.ge.Pg) .* ps.gen(:,C.ge.status);
