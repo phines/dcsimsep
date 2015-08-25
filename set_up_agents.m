@@ -26,18 +26,24 @@ adj_mat = sparse([F;T],[T;F],1,nbus,nbus); % the adjacency matrix of the network
 % So, the nonzero elements mean that there exists an n-hop path from node
 % i to j
 A_loc = speye(nbus);
-A_ext = speye(nbus);
+%A_ext = speye(nbus);
+%{ 
+%extended is the same as local for now
 for i = 1:opt.sim.nHopExt
     if i <= opt.sim.nHopLoc
         A_loc = A_loc + adj_mat^i;
     end
     A_ext = A_ext + adj_mat^i;
 end
+%}
+for i = 1:opt.sim.nHopLoc
+    A_loc = A_loc + adj_mat^i;
+end
 % give the local and extended neighborhood bus_i's to each agent
 for i = 1:nbus
     ps_agents(i).bus_id = ps.bus(i,C.bu.id); % save bus IDs
     ps_agents(i).loc_nei = find(A_loc(i,:) > 0); % save local neighborhood (bus_i)
-    ps_agents(i).ext_nei = find(A_ext(i,:) > 0); % save extended neighborhood (bus_i)
+    %ps_agents(i).ext_nei = find(A_ext(i,:) > 0); % save extended neighborhood (bus_i)
 end
 
 

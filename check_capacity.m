@@ -15,6 +15,12 @@ for i = 1:length(ps_agents_local)
     Pg_cap = ps_agent_loc.capacity.Pg;
     sf_cap = ps_agent_loc.capacity.sf;
     Pd_cap = ps_agent_loc.shunt(ish,C.sh.P).*sf_cap;
+    if any(Pd_cap < -EPS)
+        if all(ps_agent_loc.shunt(ish,C.sh.P) > EPS)
+            error('Something is wrong in setting the load capacity.')
+        end
+        Pd_cap = Pd_cap .* (Pd_cap>EPS);
+    end        
     this_ramp_cap = ps_agent_loc.capacity.this_ramp;
     % check if after generation will be positive
     Pg_after = Pg_cap + delta_Pg(ig);

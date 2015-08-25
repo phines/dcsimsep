@@ -18,13 +18,11 @@ end
 
 % init the outputs
 is_blackout = 0;
-MW_lost = struct('rebalance',0,'control',0,'cont_rebalance',0);
+MW_lost = struct('rebalance',0,'control',0);
 imbalance = 0;
 % rebalance: MW_lost after islanding in rebalance.m
 % control: MW_lost due to load shedding in emergency control (central and
 % distributed)
-% cont_rebalance: MW_lost in rebalance after distributed control, in case
-% it caused some imbalance (it does not most of the times)
 verbose = opt.verbose;
 
 p_out=0;  
@@ -41,7 +39,7 @@ ps.relay = relay_settings(ps,false,true);
 % some constants
 t_max = opt.sim.t_max; % time limit for the simulation
 EPS = 1e-4;
-dt_max = opt.sim.dt; % for relays. This needs to change in future.
+dt_max = opt.sim.dt; % maximum simulation time
 
 % set up agents if this is distributed
 if strcmp(opt.sim.control_method,'distributed_control')
@@ -301,10 +299,9 @@ total_MW_lost = Pd0_sum - sum(Pd);
 if abs(total_MW_lost - (MW_lost.control + MW_lost.rebalance)) > EPS
     error('Something is wrong.')
 end
-
 % Print something
 if verbose
-    n_overloads = sum(ps.branch(:,C.br.Pf)>ps.branch(:,C.br.rateB));
+    n_overloads = sum(ps.branch(:,C.br.Pf)>ps.branch(:,C.br.rateB)+EPS);
     fprintf('-------------- t = %7.3f -----------------\n',t);
     fprintf(' Simulation complete\n');
     fprintf('  %d emergency (rateB) overloads remain\n',n_overloads);
@@ -313,9 +310,9 @@ if verbose
     fprintf('  %g MW (%.1f%%) in rebalance,  %g MW (%.1f%%) in control\n', ...
         MW_lost.rebalance, MW_lost.rebalance/Pd0_sum*100, ...
         MW_lost.control, MW_lost.control/Pd0_sum*100);
-    if imbalance > 0
+    if imbalance > EPS
         fprintf('  %g MW (%.1f%%) imbalance occured due to control.',...
-            imabalance, imbalance/Pd0_sum*100);
+            imbalance, imbalance/Pd0_sum*100);
     end
     fprintf('--------------------------------------------\n');
 end

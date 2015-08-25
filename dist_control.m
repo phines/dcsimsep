@@ -103,7 +103,7 @@ mis = sum(Pg) - sum(Pd);
 if mis > EPS
     % record and do a rebalance
     imbalance = imbalance + mis; 
-    ps = rebalance(ps,sub_grids,ramp_limits,verbose);
+    ps = rebalance(ps,sub_grids,ramp_limits,opt);
 end
 
 % run power flow on ps 

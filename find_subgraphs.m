@@ -1,13 +1,12 @@
-function [graphNos,nSubGraphs] = find_subgraphs(nodes_A,links)
+function [graphNos,nSubGraphs,linkNos] = find_subgraphs(nodes_A,links)
 % This function identifies connected components in an undirected graph
 %
-% usage: [graphNos,nSubGraphs] = find_subgraphs(A)
-%  where A is an n x n symetrical incidence matrix 
+% usage: [graphNos,nSubGraphs,linkNos] = find_subgraphs(A)
+%  where A is an n x n symetrical adjacency matrix 
 %or
-% usage: [graphNos,nSubGraphs] = find_subgraphs(nodes,links)
-%  where nodes is  an n x 1 list of node numbers and links is
+% usage: [graphNos,nSubGraphs,linkNos] = find_subgraphs(nodes_A,links)
+%  where nodes is an n x 1 list of node numbers and links is 
 %  m x (2+) list of edges (from, to)
-%
 % The return value is a n x 1 vector of sub-graph numbers, and the
 % number of sub-graphs found
 
@@ -17,19 +16,21 @@ if n==dum
 else
     nodes = nodes_A;
     n = length(nodes);
+    m = size(links,1);
     % figure out which links are internal
     internal = ismember(links(:,1),nodes) & ismember(links(:,2),nodes);
     % renumber to get sequential numbering
     e2i = sparse(nodes,1,(1:n)',max(nodes),1);
-    % form the incidence matrix
+    % form the adjacency matrix
     F = e2i( links(internal,1) );
     T = e2i( links(internal,2) );
     A = sparse([F;T],[T;F],1,n,n) + speye(n);
-    %m = size(F,1);
+    m_int = size(F,1);
 end
 
 grNo = 1;
 graphNos = zeros(n,1);
+linkNos_int = zeros(m_int,1);
 next = 1;
 while ~isempty(next)
   included = false(n,1);
@@ -46,7 +47,20 @@ while ~isempty(next)
 end
 
 if nargout > 1
-  nSubGraphs = max(graphNos);
+    nSubGraphs = max(graphNos);
+end
+
+if nargout > 2
+    for i = 1:m_int
+        this_busi = F(i);
+        linkNos_int(i) = graphNos(this_busi);
+        % Error check
+        if graphNos(T(i)) ~= graphNos(this_busi)
+            error('This should not happen.')
+        end
+    end
+    linkNos = zeros(m,1);
+    linkNos(internal) = linkNos_int;
 end
 
 return

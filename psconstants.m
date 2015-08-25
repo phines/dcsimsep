@@ -180,11 +180,14 @@ if isempty(C)
 	C.sh.type   = 7; % indicates how this shunt is (or is not) controlled
 	C.sh.value  = 8; % the relative value of this load ($/MVA), where MVA is abs(P+jQ)
 	C.sh.frac_E = 9; % fraction of the shunt that should use an expontential load model P*Vmag^gamma;
+	C.sh.gamma  = 10; % the exponent gamma in the equation above.
+    C.sh.near_gen = 11; % the nearest generator to get frequency signal
+    C.sh.id     = 12; % unique id number for this shunt element.
+	C.sh.cols   = 12; % minimum number of columns
+    % synonyms:   
 	C.shunt     = C.sh; % synonym
-    C.sh.col_names = {'bus','P','Q','frac_S','frac_Z','status','type','value'};
-    C.sh.cols   = 9; % minimum number of columns	
+    C.sh.col_names = {'bus','P','Q','frac_S','frac_Z','status','type','value','frac_E','gamma','near_genID','id'};
 
-    
     %% event-related definitions
 
     % event types 

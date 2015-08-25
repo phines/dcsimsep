@@ -118,7 +118,7 @@ if any(abs(measured_flow)>flow_max)
         imbalance = imbalance + mis_new;
         % If there was an error in the balance, run rebalance again
         if abs(mis_new)>EPS
-            ps = rebalance(ps,sub_grids,max_ramp,opt.verbose);
+            ps = rebalance(ps,sub_grids,max_ramp,opt);
             ge_status = ps.gen(:,C.ge.status);
             Pg_max = ps.gen(:,C.ge.Pmax).*ge_status + EPS;
             Pg_min = ps.gen(:,C.ge.Pmin).*ge_status - EPS;

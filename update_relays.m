@@ -58,17 +58,20 @@ end
 
 % figure out the time step size
 [dt_trip,~] = min(trip_t(trip_t>0));
+%{
 if dt_trip > 1e6
     dt = Inf; % This stops simulation once it gets out of update_relays 
 else
     dt = min(dt_max,dt_trip);
 end
+%}
+dt = min(dt_max,dt_trip); % to see control actions, we should only use this even if dt_trip > 1e6
 
 % update all of the relays based on their excess
 relay(:,C.re.state_a) = max(relay(:,C.re.state_a) + excess*dt + SMALL_EPS,0);
 
 % check to see if any relays trip
-if dt_trip<=dt_max
+if (dt_trip <= dt_max) && (dt_trip ~= Inf)
     relay_trips = find(relay(:,C.re.state_a)>=relay(:,C.re.threshold));
     % error check:
     diff_in_trip_t = trip_t(relay_trips)-trip_t(relay_trips(1));

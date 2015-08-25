@@ -140,7 +140,7 @@ b_dPg = Pg0;
 
 % -\sigma dPd <= Pd0
 A_dPd = sparse(repmat((1:nd)',Np,1), ix.dPd, -1, nd, nx);
-b_dPd = Pd0;
+b_dPd = max(Pd0,0); 
 
 % merge the constraints
 lp_Aeq = [A_dc; A_f];
