@@ -1,5 +1,5 @@
-function [is_blackout,relay_outages,MW_lost,p_out,busessep,movie_data] = dcsimsep(ps,br_outages,bus_outages,opt)  
-% usage: [is_blackout,relay_outages,MW_lost,p_out,busessep,movie_data] = dcsimsep(ps,br_outages,bus_outages,opt)  
+function [is_blackout,relay_outages,MW_lost,p_out,busessep,movie_data,n_msg] = dcsimsep(ps,br_outages,bus_outages,opt)  
+% usage: [is_blackout,relay_outages,MW_lost,p_out,busessep,movie_data,n_msg] = dcsimsep(ps,br_outages,bus_outages,opt)  
 % is_blackout indicates whether a large separation occurs
 % branches_lost gives the set of dependant outages that occur due to relay actions
 %  this is a ? by 2 matrix, with t in the first column, br no. in the second
@@ -7,6 +7,8 @@ function [is_blackout,relay_outages,MW_lost,p_out,busessep,movie_data] = dcsimse
 % MW_lost indicates how much load was lost as a result of small separations
 % p_out is proportion of buses separated  
 % busessep is a list of the buses that separated  
+% n_msg is an nx1 vector of the maximum number of messages per iteration
+% for each agent during the simulation (in case of distributed control)
 
 % check the inputs
 if nargin<3
@@ -48,7 +50,7 @@ if strcmp(opt.sim.control_method,'distributed_control')
 end
 
 % Grab some useful data
-n = size(ps.bus,1);
+nbus = size(ps.bus,1);
 %m = size(ps.branch,1);
 F = ps.bus_i(ps.branch(:,1));
 T = ps.bus_i(ps.branch(:,2));
@@ -70,6 +72,10 @@ if all(ramp_rate==0)
                                             % would be 5 MW/min. Reasonable
     ramp_rate = ramp_rate_MW_per_min/60;
 end
+ramp_dt = opt.sim.fast_ramp_mins*60;
+ramp_limits = ramp_rate * ramp_dt;
+ps.gen(:,C.ge.ramp_rate_down) = ramp_limits;
+
 % Print the time
 if verbose
     fprintf('------- t = 0.00 ----------\n');
@@ -125,7 +131,7 @@ if ~isempty(bus_outages)
     for i=1:length(bus_outages)
         bus_no = bus_outages(i);
         bus_ix = ps.bus_i(bus_no);
-        if opt.debug && isempty(bus_ix) || bus_ix<=0 || bus_ix>n
+        if opt.debug && isempty(bus_ix) || bus_ix<=0 || bus_ix>nbus
             error('%d is not a valid bus number',bus_no);
         end
         br_set = (F==bus_ix) | (T==bus_ix);
@@ -146,6 +152,9 @@ end
 
 % Begin the main while loop for DCSIMSEP
 it_no = 1;
+t_prev_control = -dt_max; % the time that a previous control action was done.
+                          % Set negative so that the first control action will
+                          % be done no matter its time.
 while true
     % Step 3. Find sub-grids in the network and check for major separation
     [sep,sub_grids,n_sub,p_out,busessep] = check_separation(ps,opt.sim.stop_threshold,verbose);
@@ -192,26 +201,39 @@ while true
     end
 
     % Step 4a. Take control actions if needed.
-    switch opt.sim.control_method
-        % Compute and implement emergency control actions
-        %  Note that this code also interfaces with a python comm. model,
-        %  if requested in the options structure
-        case 'emergency_control'
-            [ps, MW_lost_control, mis] = old_control_actions(ps,sub_grids,ramp_rate,it_no,opt);
-        case 'distributed_control' % distributed emergency control 
-            [ps, MW_lost_control, mis] = dist_control(ps_agents,ps,sub_grids,ramp_rate,opt);
-        case 'none'
-            MW_lost_control = 0;
-            mis = 0;
-        otherwise
-            error('Undefined control method.')
+    % Make sure the previous control action was done at least dt_max seconds ago
+    if ~strcmp(opt.sim.control_method, 'none') && ...
+            t - t_prev_control >= dt_max
+        switch opt.sim.control_method
+            % Compute and implement emergency control actions
+            %  Note that this code also interfaces with a python comm. model,
+            %  if requested in the options structure
+            case 'emergency_control'
+                [ps, this_MW_lost, mis] = central_control(ps,sub_grids,ramp_rate,opt,'dc');
+            case 'distributed_control' % distributed emergency control 
+                [ps_agents, ps, this_MW_lost, mis] = distributed_control(ps_agents,ps,sub_grids,ramp_rate,it_no,opt,'dc');
+            otherwise
+                error('Undefined control method.')
+        end
+        MW_lost.control = MW_lost.control + this_MW_lost.control;
+        imbalance = imbalance + mis;
+        % update previous control time
+        t_prev_control = t;
     end
-    MW_lost.control = MW_lost.control + MW_lost_control;
-    imbalance = imbalance + mis; 
+    
     % Step 5. Update relays
     [ps.relay,br_out_new,dt,n_over] = update_relays(ps,verbose,dt_max);
-    if verbose && n_over>0
-        fprintf(' There are %d overloads in the system\n',n_over);
+    
+    % Step 6. Check for any remaining overload potential, decide if we
+    % should stop the simulation
+    if n_over == 0 % previously: dt==Inf (changed because dt is now reduced
+                   % to make sure control actions are implemented every minute)
+        if verbose
+            fprintf(' There are no overloads in the system. Quitting...\n');
+        end
+        break
+    elseif n_over > 0 && verbose
+        fprintf(' There are %d overloads in the system.\n',n_over);
     end
     
     % If we want to stop when the network is divided into subnetworks, do
@@ -232,7 +254,7 @@ while true
             %fprintf('------------- t = %.3f ---------------\n',t);
             fprintf('-------- %.1f%% of load remains --------\n',load_remaining_fraction*100);
         end
-        if load_remaining_fraction<opt.sim.stop_threshold && ~is_blackout
+        if load_remaining_fraction < opt.sim.stop_threshold && ~is_blackout
             is_blackout = 1;
             if verbose
                 fprintf('----------- Blackout occurred ----------\n');
@@ -242,12 +264,7 @@ while true
             break
         end
     end
-    % Step 6. Check for any remaining overload potential, decide if we
-    % should stop the simulation
-    if dt==Inf
-        t = t + opt.sim.fast_ramp_mins*60;
-        break
-    end
+    
     % advance/print the time
     t = t + dt;
     if t > t_max % stop if the next outage happens after t_max
@@ -299,9 +316,20 @@ total_MW_lost = Pd0_sum - sum(Pd);
 if abs(total_MW_lost - (MW_lost.control + MW_lost.rebalance)) > EPS
     error('Something is wrong.')
 end
+
+if strcmp(opt.sim.control_method,'distributed_control')
+    n_msg = zeros(nbus,1);
+    % Compute the maximum number of messages per all iterations for each agent
+    for i = 1:nbus
+        n_msg(i) = max(ps_agents(i).messages);
+    end
+else
+    n_msg = 0;
+end
+
 % Print something
 if verbose
-    n_overloads = sum(ps.branch(:,C.br.Pf)>ps.branch(:,C.br.rateB)+EPS);
+    n_overloads = sum(abs(ps.branch(:,C.br.Pf))>ps.branch(:,C.br.rateB)+EPS);
     fprintf('-------------- t = %7.3f -----------------\n',t);
     fprintf(' Simulation complete\n');
     fprintf('  %d emergency (rateB) overloads remain\n',n_overloads);

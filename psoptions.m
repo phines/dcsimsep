@@ -12,7 +12,7 @@ opt.verbose = 1;
 %opt.seecascade = 0;
 opt.debug = true;
 
-opt.optimizer = 'cplex'; % or cplex, mexosi
+opt.optimizer = 'gurobi'; % or cplex, mexosi
 
 %% power flow options
 opt.pf.tolerance = 1e-8; % convergence tolerance
@@ -34,7 +34,7 @@ opt.opf.contg_rate = C.br.rateB;
 opt.sim.ramp_frac = 0.05; % fraction of generator allowed to ramp between generations
 opt.sim.writelog  = false;
 % opt.sim.dt_default = 10; % default (max) time step size  ----->  use opt.sim.dt instead of this 
-opt.sim.dt = 60; % time step between dcsimsep iterations
+opt.sim.dt = 60; % maximum time step between cascade simulation iterations
 opt.sim.t_max = 15*60; % maximum simulation time in dcsimsep
 opt.sim.draw = true;
 opt.sim.overload_time_limit = 10*60; % number of seconds that the branch can sit at its rateC level (PSS/E manual)

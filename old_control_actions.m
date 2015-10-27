@@ -91,7 +91,11 @@ if any(abs(measured_flow)>flow_max)
     ramp_dt = opt.sim.fast_ramp_mins * 60; 
     max_ramp = ramp_rate*ramp_dt;
     % Find the optimal load/gen shedding
-    [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,measured_branch_st,max_ramp,comm_status,opt);
+    if opt.sim.use_mpc
+        [delta_Pd, delta_Pg] = mpc_smp_solve_lp(ps,[],max_ramp,opt);
+    else
+        [delta_Pd, delta_Pg] = emergency_control(ps,measured_flow,measured_branch_st,max_ramp,comm_status,opt);
+    end
     % If emergency control says that we should do something:
     if any(abs(delta_Pd)>EPS)
         % check to see which loads/gens can be controlled

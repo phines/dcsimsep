@@ -20,6 +20,7 @@ ps_temp.delta_Pd0_all = zeros(nd,1);
 ps_temp.capacity = [];
 ps_temp.delta_Pg = [];
 ps_temp.delta_sf = [];
+ps_temp.messages = zeros(100,1);
 ps_agents(1:nbus) = ps_temp;
 adj_mat = sparse([F;T],[T;F],1,nbus,nbus); % the adjacency matrix of the network
 % adj_mat^n gives the number of paths with n hops from node i to node j.

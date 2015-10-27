@@ -127,7 +127,7 @@ A_pf = A_pf + sparse(F,T,+inv_X,n,ix.nx) + ...
 % b_pf = zeros(n,1);
 dPg = ps_agent.delta_Pg0_all / ps_agent.baseMVA;
 dPd = ps_agent.delta_Pd0_all / ps_agent.baseMVA;
-b_pf = (sparse(G_all,1,-dPg,n,1) + sparse(D_all,1,dPd,n,1));
+b_pf = full(sparse(G_all,1,-dPg,n,1) + sparse(D_all,1,dPd,n,1));
 mismatch = sum(dPg) - sum(dPd); 
 % make b_pf balanced when it is not already so (add mismatch to load/gen on the agent itself)
 this_bus_i = ps_agent.bus_i(ps_agent.bus_id);
@@ -186,6 +186,8 @@ if opt.verbose
 end
 %}
 switch opt.optimizer
+    case 'gurobi'
+        [x_star, fval, exitflag] = gurobi_lp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'cplex'
         [x_star,fval,exitflag,output] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'linprog'
@@ -247,7 +249,6 @@ else
     if opt.verbose
         disp('  Optimization failed');
     end
-    keyboard
     delta_Pg_pu = zeros(ng,1);
     delta_Pd_pu = zeros(nd,1);
     delta_Pg = zeros(ng,1);

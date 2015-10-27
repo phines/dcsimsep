@@ -1,4 +1,4 @@
-function [delta_Pd,delta_Pg,fval,output] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
+function [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
 % An emergency control function to adjust load, based on current measured
 %  flows
 % usage: [delta_Pd,delta_Pg] = emergency_control(ps,measured_flow,branch_st,ramp_limits,comm_status,opt,test_trivial)
@@ -171,6 +171,8 @@ if opt.verbose
     disp('  Solving the emergency control problem');
 end
 switch opt.optimizer
+    case 'gurobi'
+        [x_star, fval, exitflag] = gurobi_lp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'cplex'
         [x_star,fval,exitflag,output] = cplexlp(cost,A_ineq,b_ineq,A_pf,b_pf,x_min,x_max);
     case 'linprog'
