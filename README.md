@@ -1,7 +1,7 @@
 DCSIMSEP
 ========
 
-A DC load flow simulator of cascading (separation) in power systems, developed primarily by Paul Hines, at the University of Vermont.
+A DC load flow simulator of cascading (separation) in power systems, developed primarily by Paul Hines, at the University of Vermont, with contributions from Eduardo Cotilla-Sanchez, Pooya Rezaei, and Maggie Eppstein.
 
 This code is free to use for research purpose, and available via the GNU Public License.  If you find this useful in your research, please cite the publication listed below. 
 
