@@ -23,6 +23,7 @@ opt.pf.flat_start = 0;
 opt.pf.load_shed_rate = 0.25; % the rate at which under frequency load shedding is done in CascadingPowerFlow mode
 opt.pf.linesearch = 'exact';
 opt.pf.update = true;
+opt.pf.check_Pg = true;
 
 %% optimal power flow options
 opt.opf.generator_commitment = 0; % switch generators on/off using MIP
@@ -48,7 +49,7 @@ opt.sim.control_method = 'none';
 opt.sim.use_comm_model = false;
 % opt.sim.dt_max_default = 60; % maximum amount of time between dcsimsep iterations   ----->  use opt.sim.dt instead of this 
 opt.sim.simple_rebalance = false; % Simple method used by Zussman's model
-opt.sim.relay_trip_time = 15; % time to trip an overcurrent relay with a 50% overload (seconds)
+opt.sim.relay_trip_time = 15; % time to trip an overcurrent relay when the line is at rateC
 opt.sim.cost.load = 1;
 opt.sim.cost.overload = 1000;
 % distributed control options

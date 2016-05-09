@@ -28,7 +28,7 @@ toc
 fprintf('----------------------------------------------------------\n');
 tic
 ps = updateps(ps);
-ps = redispatch(ps);
+ps = rebalance(ps);
 ps = dcpf(ps);
 toc
 fprintf('----------------------------------------------------------\n');
@@ -39,25 +39,8 @@ Pd_total = sum(ps.shunt(:,C.sh.P));
 % Set lower gen limits to zero
 ps.gen(:,C.ge.Pmin) = 0;
 
-%% Run one extreme case
-%load crashedINsimulateDC br_outages;
-load ../BOpairs;
-opt.verbose=true;
-br_outages = BOpairs(1,:);
-[is_bo,~,MW_lost] = dcsimsep(ps,br_outages,[],opt);
-return
 
-%% Run some extreme cases
-opt.verbose=false;
-n_iters = 100;
-for i = 1:n_iters
-    br_outages = choose_k(1:m,80);
-    fprintf('Running extreme case %d of %d. ',i,n_iters);
-    [is_bo,~,MW_lost] = dcsimsep(ps,br_outages,[],opt);
-    fprintf(' Result: %.2f MW (%.2f%%) of load shedding\n',MW_lost,MW_lost/Pd_total*100);
-end
-
-%% Run several cases
+%% Run several large blackout cases
 opt.verbose = false;
 load BOpairs
 n_iters = 10;
@@ -69,14 +52,18 @@ for i = 1:n_iters
     br_outages = BOpairs(i,:);
     % run the simulator
     fprintf('Running simulation %d of %d. ',i,n_iters);
-    [~,relay_outages,MW_lost_1(i),p_out,busessep,flows] = dcsimsep(ps,br_outages,[],opt);
-    fprintf(' Result: %.2f MW of load shedding\n',MW_lost_1(i));
+    [~,relay_outages,MW_lost] = dcsimsep(ps,br_outages,[],opt);
+    total_lost = MW_lost.rebalance + MW_lost.control;
+    fprintf(' Result: %.2f MW of load shedding\n',total_lost);
     %is_blackout = dcsimsep(ps,br_outages,[],opt);
 end
 toc
 
-% try again with control
+return 
+
+%% try again with control
 disp('Testing DCSIMSEP with control.');
+disp('Note that this only works if you have cplex installed');
 opt.sim.use_control = true;
 tic
 for i = 1:n_iters

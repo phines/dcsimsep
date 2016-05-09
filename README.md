@@ -8,10 +8,11 @@ This code is free to use for research purpose, and available via the GNU Public 
 For details on how DCSIMSEP works, see:
 Margaret J. Eppstein and Paul D. H. Hines. A "Random Chemistry" Algorithm for Identifying Collections of Multiple Contingencies that Initiate Cascading Failure. IEEE Transactions on Power Systems, vol. 27, no. 3, 2012.
 
+Pooya Rezaei, Paul Hines and Margaret Eppstein, Estimating Cascading Failure Risk with Random Chemistry, IEEE Transactions on Power Systems, vol. 30, no. 5, 2015. <http://arxiv.org/abs/1405.4213>
+
 To get started with DCSIMSEP do the following:
 
 1. Navigate to the dcsimsep folder from within MATLAB
 2. Edit and run the setup.m script (this just sets up the paths)
+3. Navigate to the test/ directory: ``cd test''
 3. Edit and run test_dcsimsep.m to run some tests.  
-
-

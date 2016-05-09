@@ -14,7 +14,6 @@ function [out1,ge_status,d_factor] = rebalance(ps,sub_grids,ramp_limits,opt,subg
 %  pf_model - can be 'ac' or 'dc' (default) depending on the model used
 
 C = psconstants;
-verbose = opt.verbose;
 EPS = 1e-6;
 if ~isfield(ps,'bus_i');
     ps = updateps(ps);
@@ -79,7 +78,7 @@ for g = subgrid_list
     if abs(Pg_sub-Pd_sub*loss_factor)<EPS
         continue;
     end
-    if verbose
+    if opt.verbose
         if Pg_sub>Pd_sub*loss_factor
             fprintf(' Rebalance: Attempting to correct %.4f MW gen surplus in subgrid %d of %d.\n',Pg_sub-Pd_sub*loss_factor,g,n_sub);
         else
@@ -89,7 +88,7 @@ for g = subgrid_list
     % if there are no generators in this island
     if ~any(Gsub)
         d_factor(Dsub) = 0;
-        if verbose
+        if opt.verbose
             shed_load = Pd_sub;
             fprintf(' Rebalance: No generators in subgrid %d of %d. Shed %4.2f MW of load.\n',g,n_sub,shed_load);
         end
@@ -98,7 +97,7 @@ for g = subgrid_list
     % if there are no loads in this island
     if ~any(Dsub) || Pd_sub<=0
         ge_status(Gsub) = 0;
-        if verbose
+        if opt.verbose
             fprintf(' Rebalance: No loads in subgrid %d of %d. Tripping generator on bus(es):\n',g,n_sub)
             all_bus = full(G(Gsub));
             all_Pg_sub = full(Pg(Gsub));
@@ -150,7 +149,7 @@ for g = subgrid_list
         Pg_old = Pg; % record old Pg for printing
         Pg(ramp_set) = min( max( Pg_min(ramp_set), Pg(ramp_set)+rr(ramp_set)*factor ), Pg0(ramp_set) );
         Pg_sub = sum(Pg(Gsub));
-        if verbose
+        if opt.verbose
             all_ramp_bus = unique(ps.gen(ramp_set,C.ge.bus));
             n = length(all_ramp_bus);
             if n > 10
@@ -176,7 +175,7 @@ for g = subgrid_list
         % trip the smallest generator in ramp_set
         [~,i] = min(Pg(genset));
         gi = genset(i);
-        if verbose
+        if opt.verbose
             fprintf(' rebalance: Tripping generator on bus: %d. Pg=%.2f\n',ps.gen(gi,C.ge.bus),Pg(gi));
         end
         Pg(gi) = 0;
@@ -211,7 +210,7 @@ for g = subgrid_list
         Pg_old = Pg; % record old Pg for printing
         Pg(ramp_set) = min( Pg(ramp_set) + rr(ramp_set)*factor, Pg_max(ramp_set) );
         Pg_sub = sum(Pg(Gsub));
-        if verbose
+        if opt.verbose
             all_ramp_bus = unique(ps.gen(ramp_set,C.ge.bus));
             n = length(all_ramp_bus);
             if n > 10
@@ -233,7 +232,7 @@ for g = subgrid_list
         factor = Pg_sub/(Pd_sub*loss_factor);
         d_factor(Dsub) = factor * d_factor(Dsub);
         Pd_sub = sum(d_factor(Dsub).*Pd(Dsub));
-        if verbose
+        if opt.verbose
             shed_load = Pd_sub0 - Pd_sub;
             fprintf(' Rebalance: Shed %4.2f MW of load in subgrid %d of %d.\n',shed_load,g,n_sub);
         end
