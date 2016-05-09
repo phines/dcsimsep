@@ -1,6 +1,5 @@
 clear all;
 clc
-%addpath('../dcsimsep/');
 
 %% get constants that help us to find the data
 C = psconstants; % tells me where to find my data
@@ -65,7 +64,6 @@ return
 disp('Testing DCSIMSEP with control.');
 disp('Note that this only works if you have cplex installed');
 opt.sim.use_control = true;
-tic
 for i = 1:n_iters
     % outage
     br_outages = BOpairs(i,:);
@@ -74,21 +72,6 @@ for i = 1:n_iters
     [~,relay_outages_2,MW_lost_2(i),p_out,busessep,flows] = dcsimsep(ps,br_outages,[],opt);
     fprintf(' Result: %.2f MW of load shedding\n',MW_lost_2(i));
     %is_blackout = dcsimsep(ps,br_outages,[],opt);
-end
-toc
-
-return
-%% make a picture
-figure(1);
-Pd0 = sum(ps.shunt(:,C.sh.P));
-bo_sizes = MW_lost/Pd0;
-bar(1:n_iters,bo_sizes,1,'EdgeColor','none');
-
-fprintf('%d of %d simulations resulted in 10%% or more load shedding\n',sum(bo_sizes>0.1),n_iters);
-return
-%% draw the cascade
-if is_blackout
-    draw_cascade(ps,br_outages,bus_outages,relay_outages);
 end
 
 return
