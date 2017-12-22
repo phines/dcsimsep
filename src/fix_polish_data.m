@@ -26,6 +26,7 @@ rateA_ = max(ceil(flows*1.05),rateA);
 figure(2); clf;
 hist(flows./rateA_,50);
 title('base case over rate A');
+return
 
 % run all single branch contingencies
 contingency_flows = flows;
@@ -44,8 +45,8 @@ for i=1:m
     if n_sub>1
         ps = rebalance(ps,sub_grids,ramp_rate);
     end
-    % run the dclf
-    ps = dcpf(ps,sub_grids,1);
+    % run the dcpf
+    ps = dcpf(ps,sub_grids,false);
     flow = max(abs(ps.branch(:,[C.br.Pf C.br.Pt])),[],2);
     contingency_flows = max(flow,contingency_flows);
 end
@@ -81,7 +82,6 @@ figure(1);
 hist(rateA_./rateA,100);
 figure(2);
 hist(rateB_./rateB,100);
-
 
 return
 

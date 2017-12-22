@@ -5,3 +5,4 @@ addpath([p '/src']) % add the source directory
 addpath([p '/cplex']);
 %addpath([p '/test']);
 addpath([p '/data']);
+cd 

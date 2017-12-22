@@ -1,13 +1,19 @@
-function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids)
+function [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding,verbose)
 % usage: [ps,sub_grids,n_sub] = dcpf(ps,sub_grids,load_shedding,verbose)
 % a very simple dc power flow calculation
 % if sub_grids are not specified, they are calculated from the graph.
 
 % input check
-if nargin<1, error('ps structure must be specified'); end;
+if nargin<1, error('ps structure must be specified'); end
 if nargin<2, sub_grids = []; end
-%if nargin<3, load_shedding=false; end
-%if nargin<4, verbose = false; end
+if nargin<3, load_shedding=false; end
+if load_shedding==true
+    error('DCPF no longer supports load shedding');
+end
+if nargin<4, verbose = false; end
+if verbose
+    disp('Running dc power flow');
+end
 
 % initialize outputs
 n_sub = []; %#ok<NASGU>
@@ -133,7 +139,7 @@ for b = subset
     % find the generators at this bus
     bus_no = ps.bus(b,1);
     genset = (ps.gen(:,1)==bus_no);
-    if ~any(genset), error('no generators?'); end;
+    if ~any(genset), error('no generators?'); end
     % find the new Pg for these generators
     Pg_old = Pg_pu(genset);
     Pg_new = Pg_old * (Pg_full(b)/sum(Pg_old));

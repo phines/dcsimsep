@@ -12,17 +12,19 @@ opt.sim.stop_threshold = 0.00; % the fraction of nodes, at which to declare a ma
 opt.sim.fast_ramp_mins = 1;
 opt.sim.simple_redispatch = false;
 
-
 %% Prepare and run the simulation for the Polish grid
 %ps = case300_001_ps;
 fprintf('----------------------------------------------------------\n');
 disp('loading the data');
 tic
-if exist('case2383_mod_ps.mat','file')
-    load case2383_mod_ps;
-else
-    ps = case2383_mod_ps;
-end
+% if exist('case2383_mod_ps.mat','file')
+%     load case2383_mod_ps;
+% else
+%     ps = case2383_mod_ps;
+% end
+%load ps_polish_100;
+%ps = ps_polish_100;
+load case2383_mod_ps
 toc
 fprintf('----------------------------------------------------------\n');
 tic
@@ -38,6 +40,18 @@ Pd_total = sum(ps.shunt(:,C.sh.P));
 % Set lower gen limits to zero
 ps.gen(:,C.ge.Pmin) = 0;
 
+%% test one case of interest
+br_outages = [23 168 169];
+[~,relay_outages,MW_lost] = dcsimsep(ps,br_outages,[],opt);
+total_lost = MW_lost.rebalance + MW_lost.control
+
+%% test writeps
+writeps(ps,'temp_ps');
+ps = updateps(temp_ps);
+ps = dcpf(ps);
+printps(ps);
+
+return
 
 %% Run several large blackout cases
 opt.verbose = false;
