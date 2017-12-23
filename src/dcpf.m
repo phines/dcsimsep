@@ -94,10 +94,7 @@ for g = 1:n_sub
     % measure the load imbalance in the system
     Pd_total = sum(Pd_full(subset));
     Pg_total = sum(Pg_full(subset));
-    imbalance = Pd_total - Pg_total;
-    if abs(imbalance)>EPS
-        error('DCPF: The total imbalanced in subgrid %d of %d is %.4f pu.\n',g, n_sub,imbalance);
-    end
+    load_surplus = Pd_total - Pg_total;
     % set flows to zero if there was no generation/load in an island
     if sum(Pd_total)==0 && sum(Pg_total)==0 
         theta(subset) = 0;
@@ -116,6 +113,17 @@ for g = 1:n_sub
     theta(subset) = B(subset,subset)\net_gen(subset);
     % record the reference bus
     ref_record(g) = ref;
+    % fix the imbalance
+    if abs(load_surplus)>EPS
+        warning('DCPF: The total load surplus in subgrid %d of %d is %.4f pu.\n',g, n_sub,load_surplus);
+        % find the reference generator
+        ref_bus_no = ps.bus(ref,1);
+        ref_gens = find(ps.gen(:,1)==ref_bus_no);
+        if isempty(ref_gens)
+            error('Could not find a reference generator');
+        end
+        ps.gen(ref_gens,C.ge.Pg) = ps.gen(ref_gens,C.ge.Pg) + load_surplus/length(ref_gens);
+    end
 end
 % find the new power flows
 Pft_pu = zeros(m,1);
@@ -154,9 +162,9 @@ ps.shunt(:,C.sh.factor) = sf;
 ps.B = B;
 
 % check for imbalance
-imbalance = sum(ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status)) - sum(ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor));
+load_surplus = sum(ps.gen(:,C.ge.P).*ps.gen(:,C.ge.status)) - sum(ps.shunt(:,C.sh.P).*ps.shunt(:,C.sh.factor));
 % if abs(imbalance)>1e-3
-if abs(imbalance)>1e-2
+if abs(load_surplus)>1e-2
     error('Imbalance found when there shouldn''t be one');
 end
 

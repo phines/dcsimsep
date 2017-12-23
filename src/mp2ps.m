@@ -67,8 +67,8 @@ Yd_bus = bus(:,Cmp.GS) + j*bus(:,Cmp.BS);
 
 %% branch
 ps.branch = zeros(nBranch,C.br.cols);
-% cols 1:11 are the same
-ps.branch(:,1:21) = branch(:,1:21);
+% cols 1:11 are the key ones that we really need
+ps.branch(:,1:11) = branch(:,1:11);
 % other columns are not needed here
 
 %% gen
