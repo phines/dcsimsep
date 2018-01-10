@@ -150,6 +150,9 @@ if nargout>5
     movie_data = record_movie_data(movie_data,t,ps,sub_grids);
 end
 
+% keep track of branches that have tripped
+tripped_branches = [];
+
 % Begin the main while loop for DCSIMSEP
 it_no = 1;
 t_prev_control = -dt_max; % the time that a previous control action was done.
@@ -223,6 +226,11 @@ while true
     
     % Step 5. Update relays
     [ps.relay,br_out_new,dt,n_over] = update_relays(ps,verbose,dt_max);
+    multi_trip = ismember(br_out_new,tripped_branches);
+    if any(multi_trip)
+        error('Lines were tripped multiple times');
+    end
+    tripped_branches = union(tripped_branches,br_out_new);
     
     % Step 6. Check for any remaining overload potential, decide if we
     % should stop the simulation
@@ -277,6 +285,9 @@ while true
     
     % Step 7. Trip overloaded branches
     ps.branch(br_out_new,C.br.status) = 0;
+    ps.branch(br_out_new,C.br.Imag) = 0;
+    ps.branch(br_out_new,C.br.Pf) = 0;
+    ps.branch(br_out_new,C.br.Pt) = 0;
     % record which branches were lost
     for i = 1:length(br_out_new)
         br = br_out_new(i);
@@ -290,7 +301,7 @@ while true
     
     % print something
     if verbose && ~isempty(br_out_new)
-        fprintf(' Branch %d triped on overcurrent\n',br_out_new);
+        fprintf(' Branch %d tripped on overcurrent\n',br_out_new);
     end
     
     % Increment the counter and return to step 3.

@@ -2,8 +2,8 @@ function [relay,br_out_new,dt,n_over] = update_relays(ps,verbose,dt_max)
 % usage: [relay,br_out_new,dt,n_over] = update_relays(ps,verbose,dt_max)
 
 % default inputs
-if nargin<2, verbose=1; end;
-if nargin<3, dt_max=Inf; end;
+if nargin<2, verbose=1; end
+if nargin<3, dt_max=Inf; end
 
 % initialize outputs
 C = psconstants;
@@ -22,7 +22,7 @@ n_over = 0;
 % figure out how much time until each relay trips
 for r =1:nr
     switch relay(r,C.re.type)
-        case C.re.oc
+        case C.re.oc % if this is an overcurrent relay
             % update overcurrent relays
             br_i = relay(r,C.re.branch_loc);
             bus_loc = relay(r,C.re.bus_loc);
@@ -74,22 +74,26 @@ relay(:,C.re.state_a) = max(relay(:,C.re.state_a) + excess*dt + SMALL_EPS,0);
 if (dt_trip <= dt_max) && (dt_trip ~= Inf)
     relay_trips = find(relay(:,C.re.state_a)>=relay(:,C.re.threshold));
     % error check:
-    diff_in_trip_t = trip_t(relay_trips)-trip_t(relay_trips(1));
-    if any(abs(diff_in_trip_t)>BIG_EPS)
-        error('Something strange happened.');
-    end
+%     diff_in_trip_t = trip_t(relay_trips)-trip_t(relay_trips(1));
+%     if any(abs(diff_in_trip_t)>BIG_EPS)
+%         error('Something strange happened.');
+%     end
     % deal with relays:
     for r = relay_trips'
         switch relay(r,C.re.type)
-            case C.re.oc
+            case C.re.oc % overcurrent
                 % trip the branch
                 br_i = relay(r,C.re.branch_loc);
                 br_out_new = cat(1,br_out_new,br_i);
+                relay(r,C.re.state_a) = 0;
 
                 % print something
                 if verbose
                     Imag = max(ps.branch(br_i,C.br.Imag_f),ps.branch(br_i,C.br.Imag_t));
                     Imax = relay(r,C.re.setting1);
+                    if Imax<BIG_EPS
+                        error('Relay upper limit is set to zero');
+                    end
                     fprintf(' Branch %d will trip on overcurrent in %g sec. (%g>%g)\n',br_i,dt,Imag,Imax);
                 end
             otherwise
