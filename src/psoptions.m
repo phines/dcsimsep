@@ -42,7 +42,7 @@ opt.sim.overload_time_limit = 10*60; % number of seconds that the branch can sit
 opt.sim.stop_on_sep = false; % When true, the simulator declares a blackout
                              % based on the Giant Component size. Otherwise
                              % this depends on the blackout size in MW
-opt.sim.stop_threshold = 0; % the fraction of nodes in the giant component, or load still connected, at which to stop the simulation
+opt.sim.stop_threshold = 0.95; % the fraction of nodes in the giant component, or load still connected, at which to stop the simulation
 opt.sim.fast_ramp_mins = 1; % the minimum minutes of ramping that generators are allowed to do without load shedding
 % opt.sim.use_control = false; -----> use opt.sim.control_method instead
 opt.sim.control_method = 'none';
